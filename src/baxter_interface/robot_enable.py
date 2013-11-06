@@ -92,13 +92,8 @@ class RobotEnable(object):
         Enable all joints
         """
         if self._state.stopped:
-            if self._state.estop_button == AssemblyState.ESTOP_BUTTON_PRESSED:
-                rospy.logfatal("E-STOP is ASSERTED; Disengage and Reset robot")
-                raise IOError(errno.EREMOTEIO,
-                              "Failed to Enable: E-Stop Engaged")
-            else:
-                rospy.loginfo("Robot Stopped: Attempting Reset...")
-                self.reset()
+            rospy.loginfo("Robot Stopped: Attempting Reset...")
+            self.reset()
         self._toggle_enabled(True)
 
     def disable(self):
@@ -112,27 +107,45 @@ class RobotEnable(object):
         Reset all joints.  Trigger JRCP hardware to reset all faults.  Disable
         the robot.
         """
+        error_estop = """\
+E-Stop is ASSERTED. Disengage E-Stop and then reset the robot.
+"""
+        error_nonfatal = """Non-fatal Robot Error on reset.
+Robot reset cleared stopped state and robot can be enabled, but a non-fatal
+error persists. Check diagnostics or rethink.log for more info.
+"""
+        error_env = """Failed to reset robot.
+Please verify that the ROS_IP or ROS_HOSTNAME environment variables are set
+and resolvable. For more information please visit:
+https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
+"""
         is_reset = lambda: (self._state.enabled == False and
                             self._state.stopped == False and
                             self._state.error == False and
                             self._state.estop_button == 0 and
                             self._state.estop_source == 0
                             )
-
         pub = rospy.Publisher('robot/set_super_reset', Empty)
 
+        if (self._state.stopped and
+            self._state.estop_button == AssemblyState.ESTOP_BUTTON_PRESSED):
+            rospy.logfatal(error_estop)
+            raise IOError(errno.EREMOTEIO, "Failed to Reset: E-Stop Engaged")
+
         rospy.loginfo("Resetting robot...")
-        error_msg = """Failed to reset robot.
-Please verify that the ROS_IP or ROS_HOSTNAME environment variables are set and
-resolvable. For more information please visit:
-https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
-"""
-        baxter_dataflow.wait_for(
-            test=is_reset,
-            timeout=3.0,
-            timeout_msg=error_msg,
-            body=pub.publish,
-        )
+        try:
+            baxter_dataflow.wait_for(
+                test=is_reset,
+                timeout=3.0,
+                timeout_msg=error_env,
+                body=pub.publish
+            )
+        except OSError as e:
+            if e.errno == errno.ETIMEDOUT:
+                if self._state.error == True and self._state.stopped == False:
+                    rospy.logerr(error_nonfatal)
+                    return False
+            raise
 
     def stop(self):
         """
