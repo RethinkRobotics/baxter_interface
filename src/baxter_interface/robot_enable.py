@@ -123,8 +123,7 @@ https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
                             self._state.stopped == False and
                             self._state.error == False and
                             self._state.estop_button == 0 and
-                            self._state.estop_source == 0
-                            )
+                            self._state.estop_source == 0)
         pub = rospy.Publisher('robot/set_super_reset', Empty)
 
         if (self._state.stopped and
@@ -140,10 +139,10 @@ https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
                 timeout_msg=error_env,
                 body=pub.publish
             )
-        except OSError as e:
+        except OSError, e:
             if e.errno == errno.ETIMEDOUT:
                 if self._state.error == True and self._state.stopped == False:
-                    rospy.logerr(error_nonfatal)
+                    rospy.logwarn(error_nonfatal)
                     return False
             raise
 
