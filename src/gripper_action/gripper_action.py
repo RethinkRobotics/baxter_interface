@@ -59,7 +59,7 @@ class GripperActionServer(object):
 
         # Verify Grippers Have No Errors and are Calibrated
         if self._gripper.error():
-            self._gripper.reboot()
+            self._gripper.reset()
             if self._gripper.error():
                 msg = ("Stopping %s action server - Unable to clear error" %
                        self._gripper.name)
