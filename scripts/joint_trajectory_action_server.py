@@ -48,7 +48,7 @@ from joint_trajectory_action.joint_trajectory_action import (
 
 def start_server(limb, rate):
     print("Initializing node... ")
-    rospy.init_node("rethink_rsdk_joint_trajectory_action_server%s" %
+    rospy.init_node("rsdk_joint_trajectory_action_server%s" %
                     ("" if limb == 'both' else "_" + limb,))
     print("Initializing joint trajectory action server...")
 

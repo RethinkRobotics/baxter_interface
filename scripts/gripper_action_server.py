@@ -46,7 +46,7 @@ from gripper_action.gripper_action import (
 
 def start_server(gripper):
     print("Initializing node... ")
-    rospy.init_node("rethink_rsdk_gripper_action_server%s" %
+    rospy.init_node("rsdk_gripper_action_server%s" %
                     ("" if gripper == 'both' else "_" + gripper,))
     print("Initializing gripper action server...")
 
