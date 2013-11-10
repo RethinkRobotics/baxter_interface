@@ -215,13 +215,16 @@ class Gripper(object):
                             time=timeout,
                             )
 
-    def reboot(self, timeout=2.0, block=True):
+    def _cmd_reboot(self, timeout=2.0, block=True):
         """
+        Power cycle the gripper, removing calibration information.
+
         @param timeout (float) - timeout in seconds for reboot success
         @param block (bool) - command is blocking or non-blocking [False]
 
-        Power cycle the gripper removing calibration information and any
-        errors.
+        Basic call to the gripper reboot command. Waits for gripper to return
+        ready state but does not clear errors that could occur during boot.
+        Highly recommended to use the clean reboot() command instead.
         """
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
@@ -231,12 +234,35 @@ class Gripper(object):
                      cmd,
                      block,
                      test=lambda: (self._state.enabled == True and
-                                   self._state.error != True and
                                    self._state.ready == True),
                      time=timeout,
-                     )
+        )
         rospy.sleep(0.5)  # Allow extra time for reboot to complete
         self.set_parameters(defaults=True)
+
+    def reboot(self, timeout=2.0):
+        """
+        "Clean" reboot of gripper, removes calibration and errors.
+
+        @param timeout (float) - timeouts in seconds for reboot & reset
+
+        Calls the normal basic reboot command to power cycle the gripper and
+        then checks for errors after reboot, calling reset to clear errors if
+        needed. Recommended to use this command over the basic _cmd_reboot().
+        """
+        if self.type() != 'electric':
+            return self._capablity_warning('reboot')
+
+        self._cmd_reboot(timeout, True)
+        if self.error():
+            rospy.logwarn("Gripper rebooted with error;"
+                          " Attempting Reset...")
+            if not self.reset(timeout, True):
+                rospy.logerr("Failed to reset gripper error after reboot.")
+                return False
+            self.set_parameters(defaults=True)
+            rospy.loginfo("Gripper error successfully reset.")
+        return True
 
     def calibrate(self, timeout=5.0, block=True):
         """
@@ -487,7 +513,7 @@ class Gripper(object):
         Error states can be caused by over/undervoltage, over/under current,
         motor faults, etc.
 
-        Errors can be cleared with a gripper reset/reboot. If persistent please
+        Errors can be cleared with a gripper reset. If persistent please
         contact Rethink Robotics for further debugging.
         """
         return self._state.error == True
