@@ -292,13 +292,13 @@ class Limb(object):
         self._command_msg.mode = JointCommand.TORQUE_MODE
         self._pub_joint_cmd.publish(self._command_msg)
 
-    def move_to_neutral(self):
+    def move_to_neutral(self, timeout=15.0):
         """
         Command the joints to the center of their joint ranges
         """
         angles = dict(zip(self.joint_names(),
                           [0.0, -0.55, 0.0, 0.75, 0.0, 1.26, 0.0]))
-        return self.move_to_joint_positions(angles)
+        return self.move_to_joint_positions(angles, timeout)
 
     def move_to_joint_positions(self, positions, timeout=15.0):
         """
