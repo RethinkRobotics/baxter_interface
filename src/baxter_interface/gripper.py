@@ -255,13 +255,10 @@ class Gripper(object):
 
         self._cmd_reboot(timeout, True)
         if self.error():
-            rospy.logwarn("Gripper rebooted with error;"
-                          " Attempting Reset...")
             if not self.reset(timeout, True):
                 rospy.logerr("Failed to reset gripper error after reboot.")
                 return False
             self.set_parameters(defaults=True)
-            rospy.loginfo("Gripper error successfully reset.")
         return True
 
     def calibrate(self, timeout=5.0, block=True):
@@ -273,6 +270,9 @@ class Gripper(object):
         """
         if self.type() != 'electric':
             return self._capablity_warning('calibrate')
+
+        # reboot - necessary to clear previous error/calibration states
+        self.reboot()
 
         cmd = EndEffectorCommand.CMD_CALIBRATE
         self.command(
