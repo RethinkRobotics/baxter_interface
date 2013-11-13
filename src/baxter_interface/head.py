@@ -48,7 +48,7 @@ class Head(object):
         Used to control the head pan angle and to enable/disable the head nod
         action.
         """
-        self._state = {}
+        self._state = dict()
 
         self._pub_pan = rospy.Publisher(
             '/robot/head/command_head_pan',
