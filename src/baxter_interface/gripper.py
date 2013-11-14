@@ -25,7 +25,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import errno
 from copy import deepcopy
 from math import fabs
 
@@ -54,6 +53,8 @@ class Gripper(object):
         Interface class for a gripper on the Baxter Research Robot.
         """
         self.name = gripper + '_gripper'
+        self._cmd_sender = rospy.get_name() + '_%s'
+        self._cmd_sequence = 0
 
         ns = '/robot/end_effector/' + self.name + "/"
 
@@ -99,6 +100,11 @@ class Gripper(object):
     def _on_gripper_prop(self, properties):
         self._prop = deepcopy(properties)
 
+    def _inc_cmd_sequence(self):
+        # manage roll over with safe value (maxint)
+        self._cmd_sequence = (self._cmd_sequence % 0x7FFFFFFF) + 1
+        return self._cmd_sequence
+
     def _clip(self, val):
         return max(min(val, 100.0), 0.0)
 
@@ -122,15 +128,33 @@ class Gripper(object):
         ee_cmd = EndEffectorCommand()
         ee_cmd.id = self.hardware_id()
         ee_cmd.command = cmd
+        ee_cmd.sender = self._cmd_sender % (cmd,)
+        ee_cmd.sequence = self._inc_cmd_sequence()
         ee_cmd.args = ''
         if args != None:
             ee_cmd.args = JSONEncoder().encode(args)
+        seq_test = lambda: (self._state.command_sender == ee_cmd.sender and
+                            (self._state.command_sequence == ee_cmd.sequence
+                             or self._state.command_sequence == 0))
         self._cmd_pub.publish(ee_cmd)
         if block:
+            finish_time = rospy.get_time() + time
+            cmd_seq = baxter_dataflow.wait_for(
+                          test=seq_test,
+                          timeout=time,
+                          raise_on_error=False,
+                          body=lambda: self._cmd_pub.publish(ee_cmd)
+                      )
+            if not cmd_seq:
+                seq_msg = (("Timed out on gripper command acknowledgement for"
+                           " %s:%s") % (self.name, ee_cmd.command))
+                rospy.logdebug(seq_msg)
+            time_remain = max(0.5, finish_time - rospy.get_time())
             return baxter_dataflow.wait_for(
-                       test=test, timeout=time,
+                       test=test,
+                       timeout=time_remain,
                        raise_on_error=False,
-                       body=lambda: self._cmd_pub.publish(ee_cmd),
+                       body=lambda: self._cmd_pub.publish(ee_cmd)
                    )
         else:
             return True
@@ -211,11 +235,12 @@ class Gripper(object):
         return self.command(
                             cmd,
                             block,
-                            test=lambda: self._state.error == False,
+                            test=lambda: (self._state.error == False and
+                                          self._state.ready == True),
                             time=timeout,
                             )
 
-    def _cmd_reboot(self, timeout=2.0, block=True):
+    def _cmd_reboot(self, timeout=5.0, block=True):
         """
         Power cycle the gripper, removing calibration information.
 
@@ -230,21 +255,23 @@ class Gripper(object):
             return self._capablity_warning('reboot')
 
         cmd = EndEffectorCommand.CMD_REBOOT
-        self.command(
-                     cmd,
-                     block,
-                     test=lambda: (self._state.enabled == True and
-                                   self._state.ready == True),
-                     time=timeout,
+        success = self.command(
+                      cmd,
+                      block,
+                      test=lambda: (self._state.enabled == True and
+                                    self._state.ready == True),
+                      time=timeout
         )
         rospy.sleep(0.5)  # Allow extra time for reboot to complete
         self.set_parameters(defaults=True)
+        return success
 
-    def reboot(self, timeout=2.0):
+    def reboot(self, timeout=5.0, delay_check=0.1):
         """
         "Clean" reboot of gripper, removes calibration and errors.
 
         @param timeout (float) - timeouts in seconds for reboot & reset
+        @param delay_check (float) - seconds after reboot before error check
 
         Calls the normal basic reboot command to power cycle the gripper and
         then checks for errors after reboot, calling reset to clear errors if
@@ -253,13 +280,35 @@ class Gripper(object):
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
 
-        self._cmd_reboot(timeout, True)
+        _cmd_result = self._cmd_reboot(timeout, True)
+        rospy.sleep(delay_check)
         if self.error():
             if not self.reset(timeout, True):
                 rospy.logerr("Failed to reset gripper error after reboot.")
                 return False
             self.set_parameters(defaults=True)
         return True
+
+    def clear_calibration(self, timeout=2.0, block=True):
+        """
+        Clear calibration information from gripper.
+
+        @param timeout (float) - timeout in seconds for success
+        @param block (bool) - command is blocking or non-blocking [False]
+
+        Allows (and requires) new gripper calibration to be run.
+        """
+        if self.type() != 'electric':
+            return self._capablity_warning('clear_calibration')
+
+        cmd = EndEffectorCommand.CMD_CLEAR_CALIBRATION
+        return self.command(
+                   cmd,
+                   block,
+                   test=lambda: (self._state.calibrated == False and
+                                 self._state.ready == True),
+                   time=timeout
+        )
 
     def calibrate(self, timeout=5.0, block=True):
         """
@@ -271,17 +320,22 @@ class Gripper(object):
         if self.type() != 'electric':
             return self._capablity_warning('calibrate')
 
-        # reboot - necessary to clear previous error/calibration states
-        self.reboot()
+        # clear any previous calibration and any current errors
+        if self.calibrated():
+            self.clear_calibration()
+        if self.error():
+            self.reset()
 
         cmd = EndEffectorCommand.CMD_CALIBRATE
-        self.command(
-                     cmd,
-                     block,
-                     test=lambda: (self._state.calibrated == True),
-                     time=timeout,
-                     )
+        success = self.command(
+                      cmd,
+                      block,
+                      test=lambda: (self._state.calibrated == True and
+                                    self._state.ready == True),
+                      time=timeout
+                      )
         self.set_parameters(defaults=True)
+        return success
 
     def stop(self, timeout=5.0, block=True):
         """
@@ -326,11 +380,13 @@ class Gripper(object):
         return self.command(
                             cmd,
                             block,
-                            test=lambda: (fabs(self._state.position - position)
-                                          < self._parameters['dead_zone']
-                                          or self._state.gripping),
+                            test=lambda: (
+                                     (fabs(self._state.position - position)
+                                      < self._parameters['dead_zone']
+                                      or self._state.gripping) and
+                                      self._state.calibrated == True),
                             time=timeout,
-                            args=arguments,
+                            args=arguments
                             )
 
     def command_suction(self, block=False, timeout=5.0):
