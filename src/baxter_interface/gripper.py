@@ -368,7 +368,7 @@ class Gripper(object):
         Command the gripper position movement.
         from minimum/closed (0) to maximum/open (100)
         """
-        if self.type() != 'electric':
+        if self.type() == 'custom':
             return self._capablity_warning('command_position')
 
         if not self._state.calibrated:
@@ -377,17 +377,22 @@ class Gripper(object):
 
         cmd = EndEffectorCommand.CMD_GO
         arguments = {"position": self._clip(position)}
-        return self.command(
-                            cmd,
-                            block,
-                            test=lambda: (
-                                     (fabs(self._state.position - position)
-                                      < self._parameters['dead_zone']
-                                      or self._state.gripping) and
-                                      self._state.calibrated == True),
-                            time=timeout,
-                            args=arguments
-                            )
+        if self.type() == 'electric':
+            cmd_test = lambda: ((fabs(self._state.position - position)
+                                 < self._parameters['dead_zone']
+                                 or self._state.gripping) and
+                                self._state.calibrated == True)
+            return self.command(
+                                cmd,
+                                block,
+                                test=cmd_test,
+                                time=timeout,
+                                args=arguments
+                                )
+        elif arguments['position'] < 100.0:
+            return self.close(block=block, timeout=timeout)
+        else:
+            return self.open(block=block, timeout=timeout)
 
     def command_suction(self, block=False, timeout=5.0):
         """

@@ -54,7 +54,7 @@ class AnalogIO(object):
         self._component_type = 'analog_io'
         self._is_output = False
 
-        self._state = {}
+        self._state = dict()
 
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id

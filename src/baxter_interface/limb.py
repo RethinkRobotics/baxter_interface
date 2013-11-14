@@ -59,12 +59,12 @@ class Limb(object):
         Interface class for a limb on the Baxter robot.
         """
         self.name = limb
-        self._joint_angle = {}
-        self._joint_velocity = {}
-        self._joint_effort = {}
-        self._cartesian_pose = {}
-        self._cartesian_velocity = {}
-        self._cartesian_effort = {}
+        self._joint_angle = dict()
+        self._joint_velocity = dict()
+        self._joint_effort = dict()
+        self._cartesian_pose = dict()
+        self._cartesian_velocity = dict()
+        self._cartesian_effort = dict()
 
         self._joint_names = {
             'left': ['left_s0', 'left_s1', 'left_e0', 'left_e1',
@@ -79,7 +79,8 @@ class Limb(object):
 
         self._pub_speed_ratio = rospy.Publisher(
             ns + 'set_speed_ratio',
-            Float64)
+            Float64,
+            latch=True)
 
         self._pub_joint_cmd = rospy.Publisher(
             ns + 'joint_command',
@@ -87,7 +88,8 @@ class Limb(object):
 
         self._pub_joint_cmd_timeout = rospy.Publisher(
             ns + 'joint_command_timeout',
-            Float64)
+            Float64,
+            latch=True)
 
         _cartesian_state_sub = rospy.Subscriber(
             ns + 'endpoint_state',

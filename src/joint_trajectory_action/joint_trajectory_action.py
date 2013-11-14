@@ -74,14 +74,14 @@ class JointTrajectoryActionServer(object):
         # Controller parameters from arguments and dynamic reconfigure
         self._control_rate = rate  # Hz
         self._control_joints = []
-        self._pid_gains = {'kp': {}, 'ki': {}, 'kd': {}}
+        self._pid_gains = {'kp': dict(), 'ki': dict(), 'kd': dict()}
         self._goal_time = 0.0
-        self._goal_error = {}
-        self._error_threshold = {}
-        self._dflt_vel = {}
+        self._goal_error = dict()
+        self._error_threshold = dict()
+        self._dflt_vel = dict()
 
         # Create our PID controllers
-        self._pid = {}
+        self._pid = dict()
         for joint in self._limb.joint_names():
             self._pid[joint] = baxter_control.PID()
 
