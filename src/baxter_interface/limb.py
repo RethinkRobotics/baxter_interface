@@ -242,12 +242,17 @@ class Limb(object):
         self.set_joint_positions(self.joint_angles())
 
     def set_joint_position_speed(self, speed):
-        """
-        @param speed (float) - speed ratio of maximum joint speed for execution
+        """Set ratio of max joint speed to use during joint position moves
 
-        Sets the ratio [0.0-1.0] (clipped) of maximum joint speed for joint
-        position control execution. This will be persistent until a new
-        execution speed is specified.
+        @param speed: ratio of maximum joint speed for execution
+                      (default: 0.3) range: [0.0-1.0]
+        @type speed: float
+
+        Set the proportion of maximum controllable velocity to use
+        during joint position control execution. The default ratio
+        is `0.3`, and can be set anywhere from [0.0-1.0] (clipped).
+        Once set, a speed ratio will persist until a new execution
+        speed is set.
         """
         self._pub_speed_ratio.publish(Float64(speed))
 
