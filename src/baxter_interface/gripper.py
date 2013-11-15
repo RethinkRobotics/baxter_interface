@@ -114,12 +114,12 @@ class Gripper(object):
         rospy.logwarn(msg)
 
     def command(self, cmd, block=False, test=lambda: True,
-                time=0.0, args=None):
+                 timeout=0.0, args=None):
         """
         @param cmd (string) - string of known gripper commands
         @param block (bool) - command is blocking or non-blocking [False]
         @param test (func) - test function for command validation
-        @param time (float) - timeout in seconds for command evaluation
+        @param timeout (float) - timeout in seconds for command evaluation
         @param args (dict({str:float})) - dictionary of parameter:value
 
         Set the parameters that will describe the position command execution.
@@ -138,10 +138,10 @@ class Gripper(object):
                              or self._state.command_sequence == 0))
         self._cmd_pub.publish(ee_cmd)
         if block:
-            finish_time = rospy.get_time() + time
+            finish_time = rospy.get_time() + timeout
             cmd_seq = baxter_dataflow.wait_for(
                           test=seq_test,
-                          timeout=time,
+                          timeout=timeout,
                           raise_on_error=False,
                           body=lambda: self._cmd_pub.publish(ee_cmd)
                       )
@@ -221,7 +221,7 @@ class Gripper(object):
         cmd = EndEffectorCommand.CMD_CONFIGURE
         self.command(cmd, args=self._parameters)
 
-    def reset(self, timeout=2.0, block=True):
+    def reset(self, block=True, timeout=2.0):
         """
         @param timeout (float) - timeout in seconds for reset success
         @param block (bool) - command is blocking or non-blocking [False]
@@ -237,10 +237,10 @@ class Gripper(object):
                             block,
                             test=lambda: (self._state.error == False and
                                           self._state.ready == True),
-                            time=timeout,
+                            timeout=timeout,
                             )
 
-    def _cmd_reboot(self, timeout=5.0, block=True):
+    def _cmd_reboot(self, block=True, timeout=5.0):
         """
         Power cycle the gripper, removing calibration information.
 
@@ -260,7 +260,7 @@ class Gripper(object):
                       block,
                       test=lambda: (self._state.enabled == True and
                                     self._state.ready == True),
-                      time=timeout
+                      timeout=timeout
         )
         rospy.sleep(0.5)  # Allow extra time for reboot to complete
         self.set_parameters(defaults=True)
@@ -273,23 +273,26 @@ class Gripper(object):
         @param timeout (float) - timeouts in seconds for reboot & reset
         @param delay_check (float) - seconds after reboot before error check
 
-        Calls the normal basic reboot command to power cycle the gripper and
-        then checks for errors after reboot, calling reset to clear errors if
-        needed. Recommended to use this command over the basic _cmd_reboot().
+        Robust version of gripper reboot command; recommended to use this
+        function for rebooting grippers.
+
+        Calls the basic reboot gripper command to power cycle the gripper
+        (_cmd_reboot()) and then checks for errors after reboot, calling
+        reset to clear errors if needed.
         """
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
 
-        _cmd_result = self._cmd_reboot(timeout, True)
+        _cmd_result = self._cmd_reboot(block=True, timeout=timeout)
         rospy.sleep(delay_check)
         if self.error():
-            if not self.reset(timeout, True):
+            if not self.reset(block=True, timeout=timeout):
                 rospy.logerr("Failed to reset gripper error after reboot.")
                 return False
             self.set_parameters(defaults=True)
         return True
 
-    def clear_calibration(self, timeout=2.0, block=True):
+    def clear_calibration(self, block=True, timeout=2.0):
         """
         Clear calibration information from gripper.
 
@@ -307,10 +310,10 @@ class Gripper(object):
                    block,
                    test=lambda: (self._state.calibrated == False and
                                  self._state.ready == True),
-                   time=timeout
+                   timeout=timeout
         )
 
-    def calibrate(self, timeout=5.0, block=True):
+    def calibrate(self, block=True, timeout=5.0):
         """
         @param timeout (float) - timeout in seconds for calibration success
         @param block (bool) - command is blocking or non-blocking [False]
@@ -324,7 +327,7 @@ class Gripper(object):
         if self.calibrated():
             self.clear_calibration()
         if self.error():
-            self.reset()
+            self.reset(block=block)
 
         cmd = EndEffectorCommand.CMD_CALIBRATE
         success = self.command(
@@ -332,12 +335,12 @@ class Gripper(object):
                       block,
                       test=lambda: (self._state.calibrated == True and
                                     self._state.ready == True),
-                      time=timeout
+                      timeout=timeout
                       )
         self.set_parameters(defaults=True)
         return success
 
-    def stop(self, timeout=5.0, block=True):
+    def stop(self, block=True, timeout=5.0):
         """
         @param timeout (float) - timeout in seconds for stop success
         @param block (bool) - command is blocking or non-blocking [False]
@@ -358,7 +361,7 @@ class Gripper(object):
                             cmd,
                             block,
                             test=stop_test,
-                            time=timeout,
+                            timeout=timeout,
                             )
 
     def command_position(self, position, block=False, timeout=5.0):
@@ -371,22 +374,22 @@ class Gripper(object):
         if self.type() == 'custom':
             return self._capablity_warning('command_position')
 
-        if not self._state.calibrated:
+        if self._state.calibrated != True:
             msg = "Unable to command %s position until calibrated" % self.name
             rospy.logwarn(msg)
 
         cmd = EndEffectorCommand.CMD_GO
         arguments = {"position": self._clip(position)}
         if self.type() == 'electric':
-            cmd_test = lambda: ((fabs(self._state.position - position)
-                                 < self._parameters['dead_zone']
-                                 or self._state.gripping) and
+            cmd_test = lambda: (((fabs(self._state.position - position)
+                                  < self._parameters['dead_zone'])
+                                 or self._state.gripping == True) and
                                 self._state.calibrated == True)
             return self.command(
                                 cmd,
                                 block,
                                 test=cmd_test,
-                                time=timeout,
+                                timeout=timeout,
                                 args=arguments
                                 )
         elif arguments['position'] < 100.0:
@@ -409,7 +412,7 @@ class Gripper(object):
                             cmd,
                             block,
                             test=self.vacuum,
-                            time=timeout,
+                            timeout=timeout,
                             args=arguments,
                             )
 
