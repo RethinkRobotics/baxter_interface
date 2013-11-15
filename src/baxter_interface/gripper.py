@@ -377,14 +377,14 @@ class Gripper(object):
         if self._state.calibrated != True:
             msg = "Unable to command %s position until calibrated" % self.name
             rospy.logwarn(msg)
+            return False
 
         cmd = EndEffectorCommand.CMD_GO
         arguments = {"position": self._clip(position)}
         if self.type() == 'electric':
-            cmd_test = lambda: (((fabs(self._state.position - position)
+            cmd_test = lambda: ((fabs(self._state.position - position)
                                   < self._parameters['dead_zone'])
-                                 or self._state.gripping == True) and
-                                self._state.calibrated == True)
+                                 or self._state.gripping == True)
             return self.command(
                                 cmd,
                                 block,
