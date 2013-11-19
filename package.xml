@@ -40,4 +40,8 @@
   <run_depend>std_msgs</run_depend>
   <run_depend>trajectory_msgs</run_depend>
 
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+
 </package>

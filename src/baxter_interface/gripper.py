@@ -47,10 +47,10 @@ from baxter_core_msgs.msg import (
 class Gripper(object):
     def __init__(self, gripper):
         """
-        @param gripper - robot limb <left/right> on which the gripper
-                         is mounted
-
         Interface class for a gripper on the Baxter Research Robot.
+
+        @param gripper: robot limb <left/right> on which the gripper
+                        is mounted
         """
         self.name = gripper + '_gripper'
         self._cmd_sender = rospy.get_name() + '_%s'
@@ -116,14 +116,18 @@ class Gripper(object):
     def command(self, cmd, block=False, test=lambda: True,
                  timeout=0.0, args=None):
         """
-        @param cmd (string) - string of known gripper commands
-        @param block (bool) - command is blocking or non-blocking [False]
-        @param test (func) - test function for command validation
-        @param timeout (float) - timeout in seconds for command evaluation
-        @param args (dict({str:float})) - dictionary of parameter:value
+        Raw command call to directly control gripper.
 
-        Set the parameters that will describe the position command execution.
-        Percentage of maximum (0-100) for each parameter
+        @type cmd: str
+        @param cmd: string of known gripper commands
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
+        @type test: func
+        @param test: test function for command validation
+        @type timeout: float
+        @param timeout: timeout in seconds for command evaluation
+        @type args: dict({str:float})
+        @param args: dictionary of parameter:value
         """
         ee_cmd = EndEffectorCommand()
         ee_cmd.id = self.hardware_id()
@@ -201,9 +205,11 @@ class Gripper(object):
 
     def set_parameters(self, parameters=None, defaults=False):
         """
-        @param parameters dict({str:float}) - dictionary of parameter:value
-
         Set the parameters that will describe the position command execution.
+
+        @type parameters: dict({str:float})
+        @param parameters: dictionary of parameter:value
+
         Percentage of maximum (0-100) for each parameter
         """
         valid_parameters = self.valid_parameters()
@@ -223,10 +229,12 @@ class Gripper(object):
 
     def reset(self, block=True, timeout=2.0):
         """
-        @param timeout (float) - timeout in seconds for reset success
-        @param block (bool) - command is blocking or non-blocking [False]
-
         Resets the gripper state removing any errors.
+
+        @type timeout: float
+        @param timeout: timeout in seconds for reset success
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
         """
         if self.type() != 'electric':
             return self._capablity_warning('reset')
@@ -244,8 +252,10 @@ class Gripper(object):
         """
         Power cycle the gripper, removing calibration information.
 
-        @param timeout (float) - timeout in seconds for reboot success
-        @param block (bool) - command is blocking or non-blocking [False]
+        @type timeout: float
+        @param timeout: timeout in seconds for reboot success
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
 
         Basic call to the gripper reboot command. Waits for gripper to return
         ready state but does not clear errors that could occur during boot.
@@ -270,8 +280,10 @@ class Gripper(object):
         """
         "Clean" reboot of gripper, removes calibration and errors.
 
-        @param timeout (float) - timeouts in seconds for reboot & reset
-        @param delay_check (float) - seconds after reboot before error check
+        @type timeout: float
+        @param timeout: timeouts in seconds for reboot & reset
+        @type delay_check: float
+        @param delay_check: seconds after reboot before error check
 
         Robust version of gripper reboot command; recommended to use this
         function for rebooting grippers.
@@ -296,8 +308,10 @@ class Gripper(object):
         """
         Clear calibration information from gripper.
 
-        @param timeout (float) - timeout in seconds for success
-        @param block (bool) - command is blocking or non-blocking [False]
+        @type timeout: float
+        @param timeout: timeout in seconds for success
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
 
         Allows (and requires) new gripper calibration to be run.
         """
@@ -315,10 +329,12 @@ class Gripper(object):
 
     def calibrate(self, block=True, timeout=5.0):
         """
-        @param timeout (float) - timeout in seconds for calibration success
-        @param block (bool) - command is blocking or non-blocking [False]
-
         Calibrate the gripper setting maximum and minimum travel distance.
+
+        @type timeout: float
+        @param timeout: timeout in seconds for calibration success
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
         """
         if self.type() != 'electric':
             return self._capablity_warning('calibrate')
@@ -342,10 +358,12 @@ class Gripper(object):
 
     def stop(self, block=True, timeout=5.0):
         """
-        @param timeout (float) - timeout in seconds for stop success
-        @param block (bool) - command is blocking or non-blocking [False]
-
         Stop the gripper at the current position and apply holding force.
+
+        @type timeout: float
+        @param timeout: timeout in seconds for stop success
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
         """
         if self.type() == 'custom':
             return self._capablity_warning('stop')
@@ -366,10 +384,12 @@ class Gripper(object):
 
     def command_position(self, position, block=False, timeout=5.0):
         """
-        @param position (float) - in % 0=close 100=open
-
         Command the gripper position movement.
-        from minimum/closed (0) to maximum/open (100)
+
+        @type position: float
+        @param position: in % 0=close 100=open
+
+        From minimum/closed (0.0) to maximum/open (100.0)
         """
         if self.type() == 'custom':
             return self._capablity_warning('command_position')
@@ -418,9 +438,10 @@ class Gripper(object):
 
     def set_velocity(self, velocity):
         """
-        @param velocity (float) - in % 0=stop 100=max [50.0]
-
         Set the velocity at which the gripper position movement will execute.
+
+        @type velocity: float
+        @param velocity: in % 0=stop 100=max [50.0]
         """
         if self.type() != 'electric':
             return self._capablity_warning('set_velocity')
@@ -430,9 +451,11 @@ class Gripper(object):
 
     def set_moving_force(self, force):
         """
-        @param force (float) - in % 0=none 100=max [30.0]
+        Set the moving force threshold of the position move execution.
 
-        Set the moving force threshold at which the position move will execute.
+        @type force: float
+        @param force: in % 0=none 100=max [30.0]
+
         When exceeded, the gripper will stop trying to achieve the commanded
         position.
         """
@@ -444,7 +467,10 @@ class Gripper(object):
 
     def set_holding_force(self, force):
         """
-        @param force (float) - in % 0=none 100=max [30.0]
+        Set holding force of successful gripper grasp.
+
+        @type force: float
+        @param force: in % 0=none 100=max [30.0]
 
         Set the force at which the gripper will continue applying after a
         position command has completed either from successfully achieving the
@@ -458,7 +484,10 @@ class Gripper(object):
 
     def set_dead_band(self, dead_band):
         """
-        @param dead_band (float) - in % of full position [5.0]
+        Set the gripper dead band for position moves.
+
+        @type dead_band: float
+        @param dead_band: in % of full position [5.0]
 
         Set the gripper dead band describing the position error threshold
         where a move will be considered successful.
@@ -471,7 +500,10 @@ class Gripper(object):
 
     def set_vacuum_threshold(self, threshold):
         """
-        @param threshold (float) - in % of measured vacuum range [18.0]
+        Set suction threshold of successful grasp.
+
+        @type threshold: float
+        @param threshold: in % of measured vacuum range [18.0]
 
         Set the gripper suction threshold describing the threshold at which the
         measured suction (vacuum achieved) must exceed to denote a successful
@@ -485,9 +517,12 @@ class Gripper(object):
 
     def set_blow_off(self, blow_off):
         """
-        @param blow_off (float) - Time in seconds to blow air on release [0.4]
+        Sets the blow_off parameter.
 
-        Sets the blow_off parameter. This parameter will be used on a stop
+        @type blow_off: float
+        @param blow_off: Time in seconds to blow air on release [0.4]
+
+        This parameter will be used on a stop
         command with the suction gripper, ceasing suction and blowing air
         from the suction gripper for the seconds specified by this method.
 
@@ -502,10 +537,12 @@ class Gripper(object):
 
     def open(self, block=False, timeout=5.0):
         """
-        @param block (bool) - open command is blocking or non-blocking [False]
-        @param timeout (float) - timeout in seconds for open command success
-
         Commands maximum gripper position.
+
+        @type block: bool
+        @param block: open command is blocking or non-blocking [False]
+        @type timeout: float
+        @param timeout: timeout in seconds for open command success
         """
         if self.type() == 'custom':
             return self._capablity_warning('open')
@@ -517,10 +554,12 @@ class Gripper(object):
 
     def close(self, block=False, timeout=5.0):
         """
-        @param block (bool) - close command is blocking or non-blocking [False]
-        @param timeout (float) - timeout in seconds for close command success
-
         Commands minimum gripper position.
+
+        @type block: bool
+        @param block: close command is blocking or non-blocking [False]
+        @type timeout: float
+        @param timeout: timeout in seconds for close command success
         """
         if self.type() == 'custom':
             return self._capablity_warning('close')
