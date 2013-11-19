@@ -315,6 +315,14 @@ class Limb(object):
         Commands the limb to the provided positions.  Waits until the reported
         joint state matches that specified.
         """
+        cmd = self.joint_angles()
+
+        def filtered_cmd():
+            # First Order Filter - 0.2 Hz Cutoff
+            for joint in positions.keys():
+                cmd[joint] = 0.012488 * positions[joint] + 0.98751 * cmd[joint]
+            return cmd
+
         def genf(joint, angle):
             def joint_diff():
                 return abs(angle - self._joint_angle[joint])
@@ -330,5 +338,5 @@ class Limb(object):
             timeout_msg=("%s limb failed to reach commanded joint positions" %
                          (self.name.capitalize(),)),
             rate=100,
-            body=lambda: self.set_joint_positions(positions)
+            body=lambda: self.set_joint_positions(filtered_cmd())
             )
