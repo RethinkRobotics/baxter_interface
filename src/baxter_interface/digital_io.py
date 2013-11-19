@@ -48,7 +48,7 @@ class DigitalIO(object):
     """
     def __init__(self, component_id):
         """
-        @param component_id - unique id of the digital component
+        @param component_id: unique id of the digital component
         """
         self._id = component_id
         self._component_type = 'digital_io'
@@ -109,19 +109,22 @@ class DigitalIO(object):
     @state.setter
     def state(self, value):
         """
-        @param value bool      - new state to output {True, False}
-
         Control the state of the Digital Output. (is_output must be True)
+
+        @type value: bool
+        @param value: new state to output {True, False}
         """
         self.set_output(value)
 
     def set_output(self, value, timeout=2.0):
         """
-        @param value bool      - new state {True, False} of the Output.
-        @param timeout (float) - Seconds to wait for the io to reflect command.
-                                 If 0, just command once and return.  [0]
-
         Control the state of the Digital Output.
+
+        @type value: bool
+        @param value: new state {True, False} of the Output.
+        @type timeout: float
+        @param timeout: Seconds to wait for the io to reflect command.
+                        If 0, just command once and return. [0]
 
         Use this function for finer control over the wait_for timeout.
         """

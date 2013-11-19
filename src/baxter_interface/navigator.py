@@ -128,9 +128,10 @@ class Navigator(object):
     @inner_led.setter
     def inner_led(self, enable):
         """
-        @param enable   - True to enable the light, False otherwise
-
         Control the inner LED.
+
+        @type enable: bool
+        @param enable: True to enable the light, False otherwise
         """
         self._inner_led.set_output(enable)
 
@@ -144,9 +145,10 @@ class Navigator(object):
     @outer_led.setter
     def outer_led(self, enable):
         """
-        @param enable   - True to enable the light, False otherwise
-
         Control the outer LED.
+
+        @type enable: bool
+        @param enable: True to enable the light, False otherwise
         """
         self._outer_led.set_output(enable)
 
