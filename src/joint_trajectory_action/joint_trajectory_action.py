@@ -91,6 +91,7 @@ class JointTrajectoryActionServer(object):
         self._pub_rate.publish(self._control_rate)
 
     def _get_trajectory_parameters(self, joint_names):
+        self._goal_time = self._dyn.config['goal_time']
         for jnt in joint_names:
             if not jnt in self._limb.joint_names():
                 rospy.logerr(
@@ -227,9 +228,8 @@ class JointTrajectoryActionServer(object):
             if idx == 0:
                 # If our current time is before the first specified point
                 # in the trajectory, then we should interpolate between
-                # our current position and that point.
-                p1 = JointTrajectoryPoint()
-                p1.positions = self._get_current_position(joint_names)
+                # our start position and that point.
+                p1 = deepcopy(start_point)
             else:
                 p1 = deepcopy(trajectory_points[idx - 1])
 
