@@ -1,6 +1,6 @@
 0.7.0 (2013-11-21)
 ---------------------------------
-- Creation of baxter_interface repository from (sdk-examples/baxter_interface package).
+- Creation of baxter_interface repository from sdk-examples/baxter_interface package.
 - Adds joint torque control through the Limb interface.
 - Significant joint position accuracy improvements. Low level controls are responsible. The limb interface exploits these gains by introducing a low-pass filter in the move_to_joint_positions method allowing the robot to achieve <0.5 degrees accuracy across each joint.
 - Adds ability to set joint position command execution speed.
