@@ -11,6 +11,7 @@
 - Cameras interface adds ability to reset cameras. Useful if not all cameras are enumerated at boot.
 - Adds gripper action server. Follows standard ROS gripper action type control_msgs/GripperCommand.
 - Digital IO interface now uses signals/slots method.
+- Digital IO interface now uses read-only state property (no longer callable).
 - Adds clear_calibration to gripper interface. Sequences gripper commands for robust usage.
 - Adds Limb move_to_neutral command timeout parameter.
 - Renames trajectory_controller.py to joint_trajectory_action_server.py matching form of gripper_action_server.py.
