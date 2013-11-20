@@ -1,7 +1,7 @@
 baxter_interface
 ================
 
-Unary package containing python interface classes and action server for control of
+Python interface classes and action server for control of
 a Baxter robot from Rethink Robotics
 
 Code & Tickets
@@ -36,14 +36,14 @@ baxter_interface Repository Overview
      |       +-- settings.py
      |   +-- baxter_control/                   generic control utilities
      |   +-- baxter_dataflow/                  timing/program flow utilities
-     |   +-- joint_trajectory_action/          joint trajectory action server implementation
-     |   +-- gripper_action/                   gripper action server implementation
+     |   +-- joint_trajectory_action/          joint trajectory action implementation
+     |   +-- gripper_action/                   gripper action implementation
      |
      +-- scripts/                              action server executables
      |   +-- joint_trajectory_action_server.py
      |   +-- gripper_action_server.py
      |
-     +-- cfg/                                  
+     +-- cfg/                                  dynamic reconfigure action configs
 
 
 Other Baxter Repositories
