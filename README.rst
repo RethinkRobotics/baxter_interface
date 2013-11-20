@@ -2,7 +2,7 @@ baxter_interface
 ================
 
 Python interface classes and action servers for control of
-a Baxter robot from Rethink Robotics
+the Baxter Research Robot from Rethink Robotics
 
 Code & Tickets
 --------------
