@@ -48,7 +48,7 @@ class Head(object):
         Used to control the head pan angle and to enable/disable the head nod
         action.
         """
-        self._state = {}
+        self._state = dict()
 
         self._pub_pan = rospy.Publisher(
             '/robot/head/command_head_pan',
@@ -104,13 +104,16 @@ class Head(object):
 
     def set_pan(self, angle, speed=100, timeout=10.0):
         """
-        @param angle (float)   - Desired pan angle in radians.
-        @param speed (int)     - Desired speed to pan at, range is 0-100 [100]
-        @param timeout (float) - Seconds to wait for the head to pan to the
-                                 specified angle. If 0, just command once and
-                                 return. [10]
-
         Pan at the given speed to the desired angle.
+
+        @type angle: float
+        @param angle: Desired pan angle in radians.
+        @type speed: int
+        @param speed: Desired speed to pan at, range is 0-100 [100]
+        @type timeout: float
+        @param timeout: Seconds to wait for the head to pan to the
+                        specified angle. If 0, just command once and
+                        return. [10]
         """
         msg = HeadPanCommand(angle, speed)
         self._pub_pan.publish(msg)
@@ -127,10 +130,11 @@ class Head(object):
 
     def command_nod(self, timeout=5.0):
         """
-        @param timeout (float)  - Seconds to wait for the head to nod.
-                                  If 0, just command once and return.  [0]
-
         Command the head to nod once.
+
+        @type timeout: float
+        @param timeout: Seconds to wait for the head to nod.
+                        If 0, just command once and return. [0]
         """
         self._pub_nod.publish(True)
 

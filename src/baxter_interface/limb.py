@@ -54,17 +54,18 @@ class Limb(object):
 
     def __init__(self, limb):
         """
-        @param limb (string) - limb to interface
-
         Interface class for a limb on the Baxter robot.
+
+        @type limb: str
+        @param limb: limb to interface
         """
         self.name = limb
-        self._joint_angle = {}
-        self._joint_velocity = {}
-        self._joint_effort = {}
-        self._cartesian_pose = {}
-        self._cartesian_velocity = {}
-        self._cartesian_effort = {}
+        self._joint_angle = dict()
+        self._joint_velocity = dict()
+        self._joint_effort = dict()
+        self._cartesian_pose = dict()
+        self._cartesian_velocity = dict()
+        self._cartesian_effort = dict()
 
         self._joint_names = {
             'left': ['left_s0', 'left_s1', 'left_e0', 'left_e1',
@@ -79,7 +80,8 @@ class Limb(object):
 
         self._pub_speed_ratio = rospy.Publisher(
             ns + 'set_speed_ratio',
-            Float64)
+            Float64,
+            latch=True)
 
         self._pub_joint_cmd = rospy.Publisher(
             ns + 'joint_command',
@@ -87,7 +89,8 @@ class Limb(object):
 
         self._pub_joint_cmd_timeout = rospy.Publisher(
             ns + 'joint_command_timeout',
-            Float64)
+            Float64,
+            latch=True)
 
         _cartesian_state_sub = rospy.Subscriber(
             ns + 'endpoint_state',
@@ -163,9 +166,10 @@ class Limb(object):
 
     def joint_angle(self, joint):
         """
-        @param joint (string) - name of a joint
-
         Return the requested joint angle.
+
+        @type joint: str
+        @param joint: name of a joint
         """
         return self._joint_angle[joint]
 
@@ -177,9 +181,10 @@ class Limb(object):
 
     def joint_velocity(self, joint):
         """
-        @param joint (string) - name of a joint
-
         Return the requested joint velocity.
+
+        @type joint: str
+        @param joint: name of a joint
         """
         return self._joint_velocity[joint]
 
@@ -191,9 +196,10 @@ class Limb(object):
 
     def joint_effort(self, joint):
         """
-        @param joint (string) - name of a joint
-
         Return the requested joint effort.
+
+        @type joint: str
+        @param joint: name of a joint
         """
         return self._joint_effort[joint]
 
@@ -223,17 +229,20 @@ class Limb(object):
 
     def set_command_timeout(self, timeout):
         """
-        @param timeout (float) - timeout in seconds
-
         Set the timeout in seconds for the joint controller
+
+        @type timeout: float
+        @param timeout: timeout in seconds
         """
         self._pub_joint_cmd_timeout.publish(Float64(timeout))
 
     def exit_control_mode(self, timeout=0.2):
         """
-        @param timeout (float) - control timeout in seconds [0.2]
-
         Clean exit from advanced control modes (joint torque or velocity).
+
+        @type timeout: float
+        @param timeout: control timeout in seconds [0.2]
+
         Resets control to joint position mode with current positions.
         """
         self.set_command_timeout(timeout)
@@ -241,19 +250,26 @@ class Limb(object):
 
     def set_joint_position_speed(self, speed):
         """
-        @param speed (float) - speed ratio of maximum joint speed for execution
+        Set ratio of max joint speed to use during joint position moves.
 
-        Sets the ratio [0.0-1.0] (clipped) of maximum joint speed for joint
-        position control execution. This will be persistent until a new
-        execution speed is specified.
+        @type speed: float
+        @param speed: ratio of maximum joint speed for execution
+                      default= 0.3; range= [0.0-1.0]
+
+        Set the proportion of maximum controllable velocity to use
+        during joint position control execution. The default ratio
+        is `0.3`, and can be set anywhere from [0.0-1.0] (clipped).
+        Once set, a speed ratio will persist until a new execution
+        speed is set.
         """
         self._pub_speed_ratio.publish(Float64(speed))
 
     def set_joint_positions(self, positions):
         """
-        @param positions (dict({str:float})) - joint_name:angle command
-
         Commands the joints of this limb to the specified positions.
+
+        @type positions: dict({str:float})
+        @param positions: joint_name:angle command
         """
         self._command_msg.names = positions.keys()
         self._command_msg.command = positions.values()
@@ -262,9 +278,10 @@ class Limb(object):
 
     def set_joint_velocities(self, velocities):
         """
-        @param velocities (dict({str:float})) - joint_name:velocity command
-
         Commands the joints of this limb to the specified velocities.
+
+        @type velocities: dict({str:float})
+        @param velocities: joint_name:velocity command
 
         IMPORTANT: set_joint_velocities must be commanded at a rate great than
         the timeout specified by set_command_timeout. If the timeout is
@@ -278,9 +295,10 @@ class Limb(object):
 
     def set_joint_torques(self, torques):
         """
-        @param torques (dict({str:float})) - joint_name:torque command
-
         Commands the joints of this limb to the specified torques.
+
+        @type torques: dict({str:float})
+        @param torques: joint_name:torque command
 
         IMPORTANT: set_joint_torques must be commanded at a rate great than the
         timeout specified by set_command_timeout. If the timeout is exceeded
@@ -292,22 +310,33 @@ class Limb(object):
         self._command_msg.mode = JointCommand.TORQUE_MODE
         self._pub_joint_cmd.publish(self._command_msg)
 
-    def move_to_neutral(self):
+    def move_to_neutral(self, timeout=15.0):
         """
         Command the joints to the center of their joint ranges
         """
         angles = dict(zip(self.joint_names(),
                           [0.0, -0.55, 0.0, 0.75, 0.0, 1.26, 0.0]))
-        return self.move_to_joint_positions(angles)
+        return self.move_to_joint_positions(angles, timeout)
 
     def move_to_joint_positions(self, positions, timeout=15.0):
         """
-        @param positions (dict({str:float})) - joint_name:angle command
-        @param timeout - seconds to wait for move to finish [15]
+        Commands the limb to the provided positions.
 
-        Commands the limb to the provided positions.  Waits until the reported
-        joint state matches that specified.
+        @type positions: dict({str:float})
+        @param positions: joint_name:angle command
+        @type timeout: float
+        @param timeout: seconds to wait for move to finish [15]
+
+        Waits until the reported joint state matches that specified.
         """
+        cmd = self.joint_angles()
+
+        def filtered_cmd():
+            # First Order Filter - 0.2 Hz Cutoff
+            for joint in positions.keys():
+                cmd[joint] = 0.012488 * positions[joint] + 0.98751 * cmd[joint]
+            return cmd
+
         def genf(joint, angle):
             def joint_diff():
                 return abs(angle - self._joint_angle[joint])
@@ -323,5 +352,5 @@ class Limb(object):
             timeout_msg=("%s limb failed to reach commanded joint positions" %
                          (self.name.capitalize(),)),
             rate=100,
-            body=lambda: self.set_joint_positions(positions)
+            body=lambda: self.set_joint_positions(filtered_cmd())
             )

@@ -48,13 +48,13 @@ class AnalogIO(object):
     """
     def __init__(self, component_id):
         """
-        @param component_id - unique id of analog component
+        @param component_id: unique id of analog component
         """
         self._id = component_id
         self._component_type = 'analog_io'
         self._is_output = False
 
-        self._state = {}
+        self._state = dict()
 
         type_ns = '/robot/' + self._component_type
         topic_base = type_ns + '/' + self._id
@@ -98,11 +98,13 @@ class AnalogIO(object):
 
     def set_output(self, value, timeout=2.0):
         """
-        @param value uint16    - new state of the Output.
-        @param timeout (float) - Seconds to wait for the io to reflect command.
-                                 If 0, just command once and return.  [0]
-
         Control the state of the Analog Output.
+
+        @type value: uint16
+        @param value: new state of the Output.
+        @type timeout: float
+        @param timeout: Seconds to wait for the io to reflect command.
+                        If 0, just command once and return. [0]
         """
         if not self._is_output:
             raise IOError(errno.EACCES, "Component is not an output [%s: %s]" %

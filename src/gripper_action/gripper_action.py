@@ -103,7 +103,7 @@ class GripperActionServer(object):
             self._prm['vacuum_sensor_threshold'] = self._dyn.config[
                 self._ee + '_vacuum_threshold']
             self._prm['blow_off_seconds'] = self._dyn.config[
-                self._ee + '_blow_off_seconds']
+                self._ee + '_blow_off']
         self._gripper.set_parameters(parameters=self._prm)
 
     def _update_feedback(self, position):
@@ -117,7 +117,7 @@ class GripperActionServer(object):
                                        self._gripper.parameters()['dead_zone'])
         if self._type == 'suction':
             self._fdbk.effort = self._gripper.vacuum_sensor()
-            if position > 50.0:
+            if position >= 100.0:
                 self._fdbk.reached_goal = (not self._gripper.sucking() and
                                            not self._gripper.blowing())
             else:
@@ -129,7 +129,7 @@ class GripperActionServer(object):
         if self._type == 'electric':
             self._gripper.command_position(position, block=False)
         elif self._type == 'suction':
-            if position > 50.0:
+            if position >= 100.0:
                 self._gripper.open(block=False)
             else:
                 # if infinite timeout, command suction for 1 hour
@@ -144,7 +144,7 @@ class GripperActionServer(object):
                     fabs(self._gripper.position() - position) <
                     self._gripper.parameters()['dead_zone'])
         elif self._type == 'suction':
-            if position > 50.0:
+            if position >= 100.0:
                 return (not self._gripper.sucking() and
                         not self._gripper.blowing())
             else:
