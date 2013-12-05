@@ -345,6 +345,7 @@ class Limb(object):
         diffs = [genf(j, a) for j, a in positions.items() if
                  j in self._joint_angle]
 
+        self.set_joint_positions(filtered_cmd())
         baxter_dataflow.wait_for(
             lambda: (all(diff() < settings.JOINT_ANGLE_TOLERANCE
                          for diff in diffs)),
@@ -352,5 +353,6 @@ class Limb(object):
             timeout_msg=("%s limb failed to reach commanded joint positions" %
                          (self.name.capitalize(),)),
             rate=100,
+            raise_on_error=False,
             body=lambda: self.set_joint_positions(filtered_cmd())
             )
