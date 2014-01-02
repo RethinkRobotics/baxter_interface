@@ -318,7 +318,8 @@ class Limb(object):
                           [0.0, -0.55, 0.0, 0.75, 0.0, 1.26, 0.0]))
         return self.move_to_joint_positions(angles, timeout)
 
-    def move_to_joint_positions(self, positions, timeout=15.0):
+    def move_to_joint_positions(self, positions, timeout=15.0,
+                                threshold=settings.JOINT_ANGLE_TOLERANCE):
         """
         Commands the limb to the provided positions.
 
@@ -326,6 +327,9 @@ class Limb(object):
         @param positions: joint_name:angle command
         @type timeout: float
         @param timeout: seconds to wait for move to finish [15]
+        @type threshold: float
+        @param threshold: position threshold in radians across each joint when
+        move is considered successful [0.008726646]
 
         Waits until the reported joint state matches that specified.
         """
@@ -346,11 +350,11 @@ class Limb(object):
                  j in self._joint_angle]
 
         baxter_dataflow.wait_for(
-            lambda: (all(diff() < settings.JOINT_ANGLE_TOLERANCE
-                         for diff in diffs)),
+            lambda: (all(diff() < threshold for diff in diffs)),
             timeout=timeout,
             timeout_msg=("%s limb failed to reach commanded joint positions" %
                          (self.name.capitalize(),)),
             rate=100,
+            raise_on_error=False,
             body=lambda: self.set_joint_positions(filtered_cmd())
             )
