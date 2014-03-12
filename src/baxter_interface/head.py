@@ -154,5 +154,5 @@ class Head(object):
                 timeout=timeout,
                 rate=100,
                 timeout_msg="Failed to complete head nod command",
-                body=lambda: self._pub_nod.publish(True)
+                body=lambda: self._pub_nod.publish(False)
             )
