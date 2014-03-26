@@ -85,7 +85,8 @@ class Limb(object):
 
         self._pub_joint_cmd = rospy.Publisher(
             ns + 'joint_command',
-            JointCommand)
+            JointCommand,
+            tcp_nodelay=True)
 
         self._pub_joint_cmd_timeout = rospy.Publisher(
             ns + 'joint_command_timeout',
@@ -95,13 +96,17 @@ class Limb(object):
         _cartesian_state_sub = rospy.Subscriber(
             ns + 'endpoint_state',
             EndpointState,
-            self._on_endpoint_states)
+            self._on_endpoint_states,
+            queue_size=1,
+            tcp_nodelay=True)
 
         joint_state_topic = 'robot/joint_states'
         _joint_state_sub = rospy.Subscriber(
             joint_state_topic,
             JointState,
-            self._on_joint_states)
+            self._on_joint_states,
+            queue_size=1,
+            tcp_nodelay=True)
 
         err_msg = ("%s limb init failed to get current joint_states "
                    "from %s") % (self.name.capitalize(), joint_state_topic)
@@ -264,7 +269,7 @@ class Limb(object):
         """
         self._pub_speed_ratio.publish(Float64(speed))
 
-    def set_joint_positions(self, positions):
+    def set_joint_positions(self, positions, raw=False):
         """
         Commands the joints of this limb to the specified positions.
 
@@ -273,7 +278,10 @@ class Limb(object):
         """
         self._command_msg.names = positions.keys()
         self._command_msg.command = positions.values()
-        self._command_msg.mode = JointCommand.POSITION_MODE
+        if raw:
+            self._command_msg.mode = JointCommand.RAW_POSITION_MODE
+        else:
+            self._command_msg.mode = JointCommand.POSITION_MODE
         self._pub_joint_cmd.publish(self._command_msg)
 
     def set_joint_velocities(self, velocities):
