@@ -85,7 +85,8 @@ class Limb(object):
 
         self._pub_joint_cmd = rospy.Publisher(
             ns + 'joint_command',
-            JointCommand)
+            JointCommand,
+            tcp_nodelay=True)
 
         self._pub_joint_cmd_timeout = rospy.Publisher(
             ns + 'joint_command_timeout',
@@ -95,13 +96,17 @@ class Limb(object):
         _cartesian_state_sub = rospy.Subscriber(
             ns + 'endpoint_state',
             EndpointState,
-            self._on_endpoint_states)
+            self._on_endpoint_states,
+            queue_size=1,
+            tcp_nodelay=True)
 
         joint_state_topic = 'robot/joint_states'
         _joint_state_sub = rospy.Subscriber(
             joint_state_topic,
             JointState,
-            self._on_joint_states)
+            self._on_joint_states,
+            queue_size=1,
+            tcp_nodelay=True)
 
         err_msg = ("%s limb init failed to get current joint_states "
                    "from %s") % (self.name.capitalize(), joint_state_topic)
