@@ -275,6 +275,15 @@ class Limb(object):
 
         @type positions: dict({str:float})
         @param positions: joint_name:angle command
+        @type raw: bool
+        @param raw: advanced, direct position control mode
+
+        IMPORTANT: 'raw' joint position control mode allows for commanding
+        joint positions, without modification, directly to the JCBs
+        (Joint Controller Boards). While this results in more unaffected
+        motions, 'raw' joint position control mode bypasses the safety system
+        modifications (e.g. collision avoidance).
+        Please use with caution.
         """
         self._command_msg.names = positions.keys()
         self._command_msg.command = positions.values()
