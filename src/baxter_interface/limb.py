@@ -269,16 +269,28 @@ class Limb(object):
         """
         self._pub_speed_ratio.publish(Float64(speed))
 
-    def set_joint_positions(self, positions):
+    def set_joint_positions(self, positions, raw=False):
         """
         Commands the joints of this limb to the specified positions.
 
         @type positions: dict({str:float})
         @param positions: joint_name:angle command
+        @type raw: bool
+        @param raw: advanced, direct position control mode
+
+        IMPORTANT: 'raw' joint position control mode allows for commanding
+        joint positions, without modification, directly to the JCBs
+        (Joint Controller Boards). While this results in more unaffected
+        motions, 'raw' joint position control mode bypasses the safety system
+        modifications (e.g. collision avoidance).
+        Please use with caution.
         """
         self._command_msg.names = positions.keys()
         self._command_msg.command = positions.values()
-        self._command_msg.mode = JointCommand.POSITION_MODE
+        if raw:
+            self._command_msg.mode = JointCommand.RAW_POSITION_MODE
+        else:
+            self._command_msg.mode = JointCommand.POSITION_MODE
         self._pub_joint_cmd.publish(self._command_msg)
 
     def set_joint_velocities(self, velocities):
