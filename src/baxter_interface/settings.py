@@ -27,3 +27,9 @@
 
 JOINT_ANGLE_TOLERANCE = 0.008726646
 HEAD_PAN_ANGLE_TOLERANCE = 0.1396263401
+
+## Versioning
+SDK_VERSION = '0.8.0'
+CHECK_VERSION = True
+# Version Compatibility Maps - {current: compatible}
+VERSIONS_SDK2ROBOT = {'0.8.0': ['0.8.0']}

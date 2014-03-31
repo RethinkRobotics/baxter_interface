@@ -56,7 +56,7 @@ class Gripper(object):
         self._cmd_sender = rospy.get_name() + '_%s'
         self._cmd_sequence = 0
 
-        ns = '/robot/end_effector/' + self.name + "/"
+        ns = 'robot/end_effector/' + self.name + "/"
 
         self._state = None
         self._prop = EndEffectorProperties()
