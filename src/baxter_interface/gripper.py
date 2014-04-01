@@ -60,6 +60,7 @@ class Gripper(object):
 
         self._state = None
         self._prop = EndEffectorProperties()
+        self.type_changed = baxter_dataflow.Signal()
 
         self._parameters = dict()
 
@@ -98,6 +99,8 @@ class Gripper(object):
         self._state = deepcopy(state)
 
     def _on_gripper_prop(self, properties):
+        if self._prop.ui_type != properties.ui_type:
+            self.type_changed(properties.ui_type)
         self._prop = deepcopy(properties)
 
     def _inc_cmd_sequence(self):
