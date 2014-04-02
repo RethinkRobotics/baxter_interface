@@ -85,12 +85,13 @@ class DigitalIO(object):
         if self._state == None:
             self._state = new_state
             self._is_output = not msg.isInputOnly
+        old_state = self._state
+        self._state = new_state
 
         # trigger signal if changed
-        if self._state != new_state:
+        if old_state != new_state:
             self.state_changed(new_state)
 
-        self._state = new_state
 
     @property
     def is_output(self):
