@@ -54,6 +54,7 @@ class DigitalIO(object):
         self._component_type = 'digital_io'
         self._is_output = False
         self._state = None
+
         self.state_changed = baxter_dataflow.Signal()
 
         type_ns = '/robot/' + self._component_type
@@ -82,16 +83,14 @@ class DigitalIO(object):
         Updates the internally stored state of the Digital Input/Output.
         """
         new_state = (msg.state == DigitalIOState.PRESSED)
-        if self._state == None:
-            self._state = new_state
+        if self._state is None:
             self._is_output = not msg.isInputOnly
         old_state = self._state
         self._state = new_state
 
         # trigger signal if changed
-        if old_state != new_state:
+        if old_state is not None and old_state != new_state:
             self.state_changed(new_state)
-
 
     @property
     def is_output(self):

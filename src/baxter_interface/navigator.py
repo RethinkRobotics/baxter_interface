@@ -172,7 +172,7 @@ class Navigator(object):
 
         if old_state.wheel != msg.wheel:
             diff = msg.wheel - old_state.wheel
-            if abs(diff%255)<127:
-                self.wheel_changed(diff%255)
+            if abs(diff % 256) < 127:
+                self.wheel_changed(diff % 256)
             else:
-                self.wheel_changed(diff%(-255))
+                self.wheel_changed(diff % (-256))
