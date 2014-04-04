@@ -86,11 +86,11 @@ class JointTrajectoryActionServer(object):
 
         # Controller parameters from arguments, messages, and dynamic
         # reconfigure
-        self._control_mode = mode
         self._control_rate = rate  # Hz
         self._control_joints = []
         self._pid_gains = {'kp': dict(), 'ki': dict(), 'kd': dict()}
         self._goal_time = 0.0
+        self._stopped_velocity = 0.0
         self._goal_error = dict()
         self._path_thresh = dict()
 
@@ -112,10 +112,8 @@ class JointTrajectoryActionServer(object):
         self._limb.exit_control_mode()
 
     def _cuff_cb(self, value):
-        if value:
-            self._cuff_state = True
-        else:
-            self._cuff_state = False
+        print value
+        self._cuff_state = value
 
     def _get_trajectory_parameters(self, joint_names, goal):
         # For each input trajectory, if path, goal, or goal_time tolerances
@@ -128,6 +126,9 @@ class JointTrajectoryActionServer(object):
         else:
             self._goal_time = self._dyn.config['goal_time']
 
+        # Stopped velocity tolerance - max velocity at end of execution
+        self._stopped_velocity = self._dyn.config['stopped_velocity_tolerance']
+
         # Path execution and goal tolerances per joint
         for jnt in joint_names:
             if not jnt in self._limb.joint_names():
@@ -138,19 +139,27 @@ class JointTrajectoryActionServer(object):
                 self._server.set_aborted(self._result)
                 return
             # Path execution tolerance
+            path_error = self._dyn.config[jnt + '_trajectory']
             if goal.path_tolerance:
                 for tolerance in goal.path_tolerance:
                     if jnt == tolerance.name:
-                        self._path_thresh[jnt] = tolerance.position
+                        if tolerance.position != 0.0:
+                            self._path_thresh[jnt] = tolerance.position
+                        else:
+                            self._path_thresh[jnt] = path_error
             else:
-                self._path_thresh[jnt] = self._dyn.config[jnt + '_trajectory']
+                self._path_thresh[jnt] = path_error
             # Goal error tolerance
+            goal_error = self._dyn.config[jnt + '_goal']
             if goal.goal_tolerance:
                 for tolerance in goal.goal_tolerance:
                     if jnt == tolerance.name:
-                        self._goal_error[jnt] = tolerance.position
+                        if tolerance.position != 0.0:
+                            self._goal_error[jnt] = tolerance.position
+                        else:
+                            self._goal_error[jnt] = goal_error
             else:
-                self._goal_error[jnt] = self._dyn.config[jnt + '_goal']
+                self._goal_error[jnt] = goal_error
 
             # PID gains if executing using the velocity (integral) controller
             if self._mode == 'velocity':
@@ -453,10 +462,14 @@ class JointTrajectoryActionServer(object):
         def check_goal_state():
             for error in self._get_current_error(joint_names, last.positions):
                 if (self._goal_error[error[0]] > 0
-                    and self._goal_error[error[0]] < math.fabs(error[1])):
+                        and self._goal_error[error[0]] < math.fabs(error[1])):
                     return error[0]
+            if (self._stopped_velocity > 0 and
+                max(self._get_current_velocities(joint_names)) >
+                      self._stopped_velocity):
+                return False
             else:
-                return None
+                return True
 
         while (now_from_start < (last_time + self._goal_time)
                and check_goal_state() and not rospy.is_shutdown()):
@@ -473,15 +486,19 @@ class JointTrajectoryActionServer(object):
 
         # Verify goal constraint
         result = check_goal_state()
-        if result != None:
-            rospy.logerr("%s: Exceeded Goal Threshold Error %s" %
-                         (self._action_name, result,))
-            self._result.error_code = self._result.GOAL_TOLERANCE_VIOLATED
-            self._server.set_aborted(self._result)
-            self._command_stop(goal.trajectory.joint_names, end_angles)
-        else:
+        if result is True:
             rospy.loginfo("%s: Joint Trajectory Action Succeeded" %
                           self._action_name)
             self._result.error_code = self._result.SUCCESSFUL
             self._server.set_succeeded(self._result)
-            self._command_stop(goal.trajectory.joint_names, end_angles)
+        elif result is False:
+            rospy.logerr("%s: Exceeded Max Goal Velocity Threshold" %
+                         (self._action_name,))
+            self._result.error_code = self._result.GOAL_TOLERANCE_VIOLATED
+            self._server.set_aborted(self._result)
+        else:
+            rospy.logerr("%s: Exceeded Goal Threshold Error %s" %
+                         (self._action_name, result,))
+            self._result.error_code = self._result.GOAL_TOLERANCE_VIOLATED
+            self._server.set_aborted(self._result)
+        self._command_stop(goal.trajectory.joint_names, end_angles)

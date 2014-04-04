@@ -66,7 +66,7 @@ def start_server(limb, rate, mode):
         jtas.append(JointTrajectoryActionServer('left', dyn_cfg_srv,
                                                 rate, mode))
     else:
-        jtas.append(JointTrajectoryActionServer(limb, dyn_cfg_srv, rate))
+        jtas.append(JointTrajectoryActionServer(limb, dyn_cfg_srv, rate, mode))
 
     def cleanup():
         for j in jtas:
