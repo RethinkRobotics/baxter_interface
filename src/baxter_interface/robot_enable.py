@@ -26,9 +26,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
-from threading import Lock
 import re
 import sys
+
+from threading import Lock
 
 import rospy
 
@@ -187,12 +188,13 @@ https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
         if not robot_version:
             rospy.logwarn("RobotEnable: Failed to retrieve robot version "
                           "from rosparam: %s\n"
-                          "Check your robot's up-state and connection to "
-                          "the robot (i.e. ROS_MASTER_URI)", param_name)
+                          "Verify robot state and connectivity "
+                          "(i.e. ROS_MASTER_URI)", param_name)
             return False
         else:
             # parse out tags
-            pattern = "([0-9]+)\.([0-9]+)\.([0-9]+)($|_(alpha|beta|pre|rc|p)([0-9]+))"
+            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)"
+                       "($|_(alpha|beta|pre|rc|p)([0-9]+))")
             match = re.search(pattern, robot_version)
             if not match:
                 rospy.logwarn("RobotEnable: Invalid robot version: %s",

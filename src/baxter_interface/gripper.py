@@ -25,10 +25,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from copy import deepcopy
-from math import fabs
 import re
 import sys
+
+from copy import deepcopy
+from math import fabs
 
 from json import (
     JSONDecoder,

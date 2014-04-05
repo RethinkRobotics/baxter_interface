@@ -40,8 +40,9 @@ from control_msgs.msg import (
     GripperCommandResult,
 )
 
-from baxter_interface import CHECK_VERSION
 import baxter_interface
+
+from baxter_interface import CHECK_VERSION
 
 
 class GripperActionServer(object):
