@@ -159,15 +159,20 @@ class Navigator(object):
         if self._state == msg:
             return
 
+        old_state = self._state
+        self._state = msg
+
         buttons = [self.button0_changed,
                    self.button1_changed,
                    self.button2_changed
                    ]
         for i, signal in enumerate(buttons):
-            if self._state.buttons[i] != msg.buttons[i]:
+            if old_state.buttons[i] != msg.buttons[i]:
                 signal(msg.buttons[i])
 
-        if self._state.wheel != msg.wheel:
-            self.wheel_changed(msg.wheel)
-
-        self._state = msg
+        if old_state.wheel != msg.wheel:
+            diff = msg.wheel - old_state.wheel
+            if abs(diff % 256) < 127:
+                self.wheel_changed(diff % 256)
+            else:
+                self.wheel_changed(diff % (-256))

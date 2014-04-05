@@ -60,6 +60,9 @@ class Gripper(object):
 
         self._state = None
         self._prop = EndEffectorProperties()
+        self.on_type_changed = baxter_dataflow.Signal()
+        self.on_gripping_changed = baxter_dataflow.Signal()
+        self.on_moving_changed = baxter_dataflow.Signal()
 
         self._parameters = dict()
 
@@ -95,10 +98,22 @@ class Gripper(object):
         self.set_parameters(defaults=True)
 
     def _on_gripper_state(self, state):
+        old_state = self._state
         self._state = deepcopy(state)
+        if old_state is not None and old_state.gripping != state.gripping:
+            self.on_gripping_changed(state.gripping == True)
+        if old_state is not None and old_state.moving != state.moving:
+            self.on_moving_changed(state.moving == True)
 
     def _on_gripper_prop(self, properties):
+        old_prop = self._prop
         self._prop = deepcopy(properties)
+        if old_prop.ui_type != self.type():
+            self.on_type_changed({
+                EndEffectorProperties.SUCTION_CUP_GRIPPER: 'suction',
+                EndEffectorProperties.ELECTRIC_GRIPPER: 'electric',
+                EndEffectorProperties.CUSTOM_GRIPPER: 'custom',
+                                 }.get(properties.ui_type, None))
 
     def _inc_cmd_sequence(self):
         # manage roll over with safe value (maxint)
