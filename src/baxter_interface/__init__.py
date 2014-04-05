@@ -37,4 +37,8 @@ from .robust_controller import RobustController
 from .settings import (
     JOINT_ANGLE_TOLERANCE,
     HEAD_PAN_ANGLE_TOLERANCE,
+    SDK_VERSION,
+    CHECK_VERSION,
+    VERSIONS_SDK2ROBOT,
+    VERSIONS_SDK2GRIPPER,
 )
