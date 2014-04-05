@@ -33,3 +33,10 @@ SDK_VERSION = '0.8.0'
 CHECK_VERSION = True
 # Version Compatibility Maps - {current: compatible}
 VERSIONS_SDK2ROBOT = {'0.8.0': ['0.8.0']}
+VERSIONS_SDK2GRIPPER = {'0.8.0':
+                          {
+                           'ok':   ['1.1.242', '0.8.0', '2.1.x'],
+                           'warn': ['0.7.0'],
+                           'fail': ['0.6.x', '1.x.x', '2.0.x'],
+                          }
+                         }

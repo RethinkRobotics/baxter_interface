@@ -27,6 +27,8 @@
 
 from copy import deepcopy
 from math import fabs
+import re
+import sys
 
 from json import (
     JSONDecoder,
@@ -42,10 +44,11 @@ from baxter_core_msgs.msg import (
     EndEffectorProperties,
     EndEffectorState,
 )
+from baxter_interface import settings
 
 
 class Gripper(object):
-    def __init__(self, gripper):
+    def __init__(self, gripper, versioned=False):
         """
         Interface class for a gripper on the Baxter Research Robot.
 
@@ -92,6 +95,11 @@ class Gripper(object):
                           timeout_msg=("Failed to get properties from %s" %
                                        (ns + 'properties',))
                           )
+
+        if versioned and self.type() == 'electric':
+            if not self.version_check():
+                sys.exit(1)
+
         self.set_parameters(defaults=True)
 
     def _on_gripper_state(self, state):
@@ -112,6 +120,78 @@ class Gripper(object):
         msg = ("%s %s - not capable of '%s' command" %
                (self.name, self.type(), cmd))
         rospy.logwarn(msg)
+
+    def version_check(self):
+        """
+        Does a safety check on the firmware version running on electric
+        grippers versus the version of the SDK software.
+        """
+        sdk_version = settings.SDK_VERSION
+        firmware_str = self.firmware_version()
+
+        if self.type() != 'electric':
+            rospy.logwarn("%s %s (%s): Version Check not needed",
+                          self.name, self.type(), firmware_str)
+            return True
+        if not firmware_str:
+            rospy.logerr("%s %s: Failed to retrieve valid version during"
+                          " Version Check.", self.name, self.type())
+            return False
+
+        # parse out tags
+        grip_version = firmware_str.split()[0]
+
+        def is_match(spec, grip):
+            if spec == grip:
+                return True
+
+            pattern = ("([0-9x]+)\.([0-9x]+)\.([0-9x]+)"
+                   "($|_(alpha|beta|pre|rc|p)([0-9]+))")
+            grip_match = re.search(pattern, grip)
+            spec_match = re.search(pattern, spec)
+            if not grip_match or not spec_match:
+                if not spec_match:
+                    rospy.logerr("Bad Gripper Version Spec: %s", spec)
+                    return False
+                rospy.logwarn("%s %s: Version Check invalid gripper "
+                              "version formats: %s for %s",
+                              self.name, self.type(), firmware_str, spec)
+                return False
+            print "grip: ",
+            print grip_match.groups()
+            print "spec: ",
+            print spec_match.groups()
+            for i in range(1, 4):
+                if (grip_match.group(i) != spec_match.group(i)
+                        and spec_match.group(i) != 'x'):
+                    return False
+            return True
+
+        if any(is_match(sdk, grip_version) for sdk
+               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['ok']):
+            return True
+        elif any(is_match(sdk, grip_version) for sdk
+               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['warn']):
+            rospy.logwarn("%s %s: Gripper Firmware version (%s) is not up-to"
+                          "-date for SDK Version (%s). Please use the "
+                          "Robot's Field-Service-Menu to Upgrade your "
+                          "Gripper Firmware.",
+                          self.name, self.type(), firmware_str, sdk_version)
+            return True
+        elif any(is_match(sdk, grip_version) for sdk
+               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['fail']):
+            rospy.logerr("%s %s: Gripper Firmware version (%s) is "
+                           "*incompatible* with SDK Version (%s). Please use "
+                           "the Robot's Field-Service-Menu to Upgrade your "
+                           "Gripper Firmware.",
+                           self.name, self.type(), firmware_str, sdk_version)
+            return False
+        else:
+            rospy.logwarn("%s %s: Gripper Firmware version (%s) does not "
+                          "match SDK Version (%s). Use the Robot's Field-"
+                          "Service-Menu to Upgrade your Gripper Firmware.",
+                          self.name, self.type(), firmware_str, sdk_version)
+            return True
 
     def command(self, cmd, block=False, test=lambda: True,
                  timeout=0.0, args=None):
