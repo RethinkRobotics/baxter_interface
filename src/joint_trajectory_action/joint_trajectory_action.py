@@ -112,7 +112,6 @@ class JointTrajectoryActionServer(object):
         self._limb.exit_control_mode()
 
     def _cuff_cb(self, value):
-        print value
         self._cuff_state = value
 
     def _get_trajectory_parameters(self, joint_names, goal):
@@ -241,6 +240,11 @@ class JointTrajectoryActionServer(object):
     def _compute_spline_coefficients(self, start, end):
         duration = (end.time_from_start.to_sec() -
                     start.time_from_start.to_sec())
+        duration2 = math.pow(duration, 2)
+        duration3 = math.pow(duration, 3)
+        duration4 = math.pow(duration, 4)
+        duration5 = math.pow(duration, 5)
+
         for jnt in xrange(len(start.positions)):
             # Check if Quintic Spline is appropriate
             # (position, velocity, acceleration provided)
@@ -257,36 +261,36 @@ class JointTrajectoryActionServer(object):
                     self._coeff[jnt][3] = ((-20.0 * start.positions[jnt]
                                             + 20.0 * end.positions[jnt]
                                             - (3.0 * start.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             + (end.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             - (12.0 * start.velocities[jnt]
                                                * duration)
                                             - (8.0 * end.velocities[jnt]
                                                * duration))
-                                           / (2.0 * math.pow(duration, 3)))
+                                           / (2.0 * duration3))
                     self._coeff[jnt][4] = ((30.0 * start.positions[jnt]
                                             - 30.0 * end.positions[jnt]
                                             + (3.0 * start.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             - (2.0 * end.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             + (16.0 * start.velocities[jnt]
                                                * duration)
                                             + (14.0 * end.velocities[jnt]
                                                * duration))
-                                           / (2.0 * math.pow(duration, 4)))
+                                           / (2.0 * duration4))
                     self._coeff[jnt][5] = ((-12.0 * start.positions[jnt]
                                             + 12.0 * end.positions[jnt]
                                             - (start.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             + (end.accelerations[jnt]
-                                               * math.pow(duration, 2))
+                                               * duration2)
                                             - (6.0 * start.velocities[jnt]
                                                * duration)
                                             - (6.0 * end.velocities[jnt]
                                                * duration))
-                                           / (2.0 * math.pow(duration, 5)))
+                                           / (2.0 * duration5))
 
             # Check if Cubic Spline is appropriate
             # (position, velocity provided)
@@ -303,12 +307,12 @@ class JointTrajectoryActionServer(object):
                                             - (2.0 * start.velocities[jnt]
                                                * duration)
                                             - end.velocities[jnt] * duration)
-                                           / math.pow(duration, 2))
+                                           / duration2)
                     self._coeff[jnt][3] = ((2.0 * start.positions[jnt]
                                             - 2.0 * end.positions[jnt]
                                             + start.velocities[jnt] * duration
                                             + end.velocities[jnt] * duration)
-                                           / math.pow(duration, 3))
+                                           / duration3)
                 self._coeff[jnt][4] = 0.0
                 self._coeff[jnt][5] = 0.0
 
@@ -334,34 +338,38 @@ class JointTrajectoryActionServer(object):
         pnt.positions = [0.0] * len(joint_names)
         pnt.velocities = [0.0] * len(joint_names)
         pnt.accelerations = [0.0] * len(joint_names)
+        time2 = math.pow(time, 2)
+        time3 = math.pow(time, 3)
+        time4 = math.pow(time, 4)
+        time5 = math.pow(time, 5)
 
         for jnt in xrange(len(joint_names)):
             # Positions at specified time
             pnt.positions[jnt] = (self._coeff[jnt][0]
                                   + time * self._coeff[jnt][1]
-                                  + math.pow(time, 2) * self._coeff[jnt][2]
-                                  + math.pow(time, 3) * self._coeff[jnt][3]
-                                  + math.pow(time, 4) * self._coeff[jnt][4]
-                                  + math.pow(time, 5) * self._coeff[jnt][5]
+                                  + time2 * self._coeff[jnt][2]
+                                  + time3 * self._coeff[jnt][3]
+                                  + time4 * self._coeff[jnt][4]
+                                  + time5 * self._coeff[jnt][5]
                                   )
 
             # Velocities at specified time
             pnt.velocities[jnt] = (self._coeff[jnt][1]
                                    + 2.0 * time * self._coeff[jnt][2]
-                                   + (3.0 * math.pow(time, 2)
+                                   + (3.0 * time2
                                       * self._coeff[jnt][3])
-                                   + (4.0 * math.pow(time, 3)
+                                   + (4.0 * time3
                                       * self._coeff[jnt][4])
-                                   + (5.0 * math.pow(time, 4)
+                                   + (5.0 * time4
                                       * self._coeff[jnt][5])
                                    )
 
             # Accelerations at specified time
             pnt.accelerations[jnt] = (2.0 * self._coeff[jnt][2]
                                       + 6.0 * time * self._coeff[jnt][3]
-                                      + (12.0 * math.pow(time, 2)
+                                      + (12.0 * time2
                                          * self._coeff[jnt][4])
-                                      + (20.0 * math.pow(time, 3)
+                                      + (20.0 * time3
                                          * self._coeff[jnt][5])
                                       )
         return pnt
@@ -466,7 +474,7 @@ class JointTrajectoryActionServer(object):
                     return error[0]
             if (self._stopped_velocity > 0 and
                 max(self._get_current_velocities(joint_names)) >
-                      self._stopped_velocity):
+                    self._stopped_velocity):
                 return False
             else:
                 return True
