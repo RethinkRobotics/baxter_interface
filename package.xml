@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>baxter_interface</name>
-  <version>0.7.0</version>
+  <version>1.0.0</version>
   <description>
     Convenient python interface classes for control
     of the Baxter Research Robot from Rethink Robotics.
