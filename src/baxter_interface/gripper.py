@@ -173,10 +173,6 @@ class Gripper(object):
                               "version formats: %s for %s",
                               self.name, self.type(), firmware_str, spec)
                 return False
-            print "grip: ",
-            print grip_match.groups()
-            print "spec: ",
-            print spec_match.groups()
             for i in range(1, 4):
                 if (grip_match.group(i) != spec_match.group(i)
                         and spec_match.group(i) != 'x'):
