@@ -63,7 +63,7 @@ class Gripper(object):
         ns = 'robot/end_effector/' + self.name + "/"
 
         self._state = None
-        self._prop = EndEffectorProperties()
+        self._prop = EndEffectorProperties(id=-1)  # initialize w/unused value
         self.on_type_changed = baxter_dataflow.Signal()
         self.on_gripping_changed = baxter_dataflow.Signal()
         self.on_moving_changed = baxter_dataflow.Signal()
@@ -117,7 +117,7 @@ class Gripper(object):
     def _on_gripper_prop(self, properties):
         old_prop = self._prop
         self._prop = deepcopy(properties)
-        if old_prop.ui_type != self.type():
+        if old_prop.ui_type != self._prop.ui_type and old_prop.id != -1:
             self.on_type_changed({
                 EndEffectorProperties.SUCTION_CUP_GRIPPER: 'suction',
                 EndEffectorProperties.ELECTRIC_GRIPPER: 'electric',
