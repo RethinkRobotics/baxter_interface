@@ -71,6 +71,12 @@ class Gripper(object):
         self._parameters = dict()
 
         self._cmd_pub = rospy.Publisher(ns + 'command', EndEffectorCommand)
+        self._prop_pub = rospy.Publisher(ns + 'rsdk/set_properties',
+                                         EndEffectorProperties)
+
+        self._state_pub = rospy.Publisher(ns + 'rsdk/set_state',
+                                          EndEffectorState)
+
 
         self._state_sub = rospy.Subscriber(
                                            ns + 'state',
@@ -318,6 +324,40 @@ class Gripper(object):
                 rospy.logwarn(msg)
         cmd = EndEffectorCommand.CMD_CONFIGURE
         self.command(cmd, args=self._parameters)
+
+    def reset_custom_properties(self):
+        """
+        Returns default properties for custom grippers
+        """
+        custom_prop = EndEffectorProperties()
+        custom_prop.id = 131073
+        custom_prop.ui_type = EndEffectorProperties.CUSTOM_GRIPPER
+        custom_prop.manufacturer = 'Rethink Research Robot'
+        custom_prop.product = 'SDK End Effector'
+        properties = [name for name in dir(custom_prop)
+                      if not name.startswith('_')]
+        for prop in properties:
+            if type(getattr(custom_prop, prop)) == bool:
+                setattr(custom_prop, prop, True)
+
+        self._prop_pub.publish(custom_prop)
+
+    def reset_custom_state(self):
+        """
+        Returns default state for custom grippers
+        """
+        custom_state = EndEffectorState()
+        states = [name for name in dir(custom_state)
+                      if not name.startswith('_') and not name.isupper()]
+        for state in states:
+            if type(getattr(custom_state, state)) == int:
+                setattr(custom_state, state, 2)
+        custom_state.timestamp = rospy.Time.now()
+        custom_state.id = 131073
+        custom_state.enabled = 1
+        custom_state.command_sequence = self._inc_cmd_sequence()
+
+        self._state_pub.publish(custom_state)
 
     def reset(self, block=True, timeout=2.0):
         """
