@@ -331,7 +331,8 @@ class Gripper(object):
         """
         Resets default properties for custom grippers
 
-        @returns (bool) - True if custom gripper properties reset successfully
+        @return: True if custom gripper properties reset successfully
+        @rtype: bool
         """
         default_id = 131073
         default_ui_type = EndEffectorProperties.CUSTOM_GRIPPER
@@ -366,7 +367,8 @@ class Gripper(object):
         """
         Resets default state for custom grippers
 
-        @returns (bool) - True if custom gripper state reset successfully
+        @return: True if custom gripper state reset successfully
+        @rtype: bool
         """
         state_true = EndEffectorState.STATE_TRUE
         state_unknown = EndEffectorState.STATE_UNKNOWN
