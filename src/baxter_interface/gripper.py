@@ -72,14 +72,22 @@ class Gripper(object):
 
         self._cmd_pub = rospy.Publisher(ns + 'command', EndEffectorCommand)
 
-        self._state_sub = rospy.Subscriber(
-                                           ns + 'state',
+        self._prop_pub = rospy.Publisher(ns + 'rsdk/set_properties',
+                                         EndEffectorProperties,
+                                         latch=True
+                                         )
+
+        self._state_pub = rospy.Publisher(ns + 'rsdk/set_state',
+                                          EndEffectorState,
+                                          latch=True
+                                          )
+
+        self._state_sub = rospy.Subscriber(ns + 'state',
                                            EndEffectorState,
                                            self._on_gripper_state
                                            )
 
-        self._prop_sub = rospy.Subscriber(
-                                          ns + 'properties',
+        self._prop_sub = rospy.Subscriber(ns + 'properties',
                                           EndEffectorProperties,
                                           self._on_gripper_prop
                                           )
@@ -318,6 +326,72 @@ class Gripper(object):
                 rospy.logwarn(msg)
         cmd = EndEffectorCommand.CMD_CONFIGURE
         self.command(cmd, args=self._parameters)
+
+    def reset_custom_properties(self, timeout=2.0):
+        """
+        Resets default properties for custom grippers
+
+        @return: True if custom gripper properties reset successfully
+        @rtype: bool
+        """
+        default_id = 131073
+        default_ui_type = EndEffectorProperties.CUSTOM_GRIPPER
+        default_manufacturer = 'Rethink Research Robot'
+        default_product = 'SDK End Effector'
+        # Create default properties message
+        prop_msg = EndEffectorProperties(
+                                         id=default_id,
+                                         ui_type=default_ui_type,
+                                         manufacturer=default_manufacturer,
+                                         product=default_product,
+                                         )
+        for idx, attr in enumerate(prop_msg.__slots__):
+            if prop_msg._slot_types[idx] == 'bool':
+                setattr(prop_msg, attr, True)
+        self._prop_pub.publish(prop_msg)
+
+        # Verify properties reset successfully
+        test = lambda: (self._prop.id == default_id and
+                        self._prop.ui_type == default_ui_type and
+                        self._prop.manufacturer == default_manufacturer and
+                        self._prop.product == default_product
+                        )
+        return baxter_dataflow.wait_for(
+                   test=test,
+                   timeout=timeout,
+                   raise_on_error=False,
+                   body=lambda: self._prop_pub.publish(prop_msg)
+               )
+
+    def reset_custom_state(self, timeout=2.0):
+        """
+        Resets default state for custom grippers
+
+        @return: True if custom gripper state reset successfully
+        @rtype: bool
+        """
+        state_true = EndEffectorState.STATE_TRUE
+        state_unknown = EndEffectorState.STATE_UNKNOWN
+        # Create default state message
+        state_msg = EndEffectorState()
+        for idx, attr in enumerate(state_msg.__slots__):
+            if 'int' in state_msg._slot_types[idx]:
+                setattr(state_msg, attr, state_unknown)
+        setattr(state_msg, 'enabled', state_true)
+        self._state_pub.publish(state_msg)
+
+        # Verify state reset successfully
+        test = lambda: (self._state.enabled == state_true and
+                        self._state.calibrated == state_unknown and
+                        self._state.ready == state_unknown and
+                        self._state.position == 0.0
+                        )
+        return baxter_dataflow.wait_for(
+                   test=test,
+                   timeout=timeout,
+                   raise_on_error=False,
+                   body=lambda: self._state_pub.publish(state_msg)
+               )
 
     def reset(self, block=True, timeout=2.0):
         """
