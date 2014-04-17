@@ -329,7 +329,9 @@ class Gripper(object):
 
     def reset_custom_properties(self, timeout=2.0):
         """
-        Returns default properties for custom grippers
+        Resets default properties for custom grippers
+
+        @returns (bool) - True if custom gripper properties reset successfully
         """
         default_id = 131073
         default_ui_type = EndEffectorProperties.CUSTOM_GRIPPER
@@ -342,11 +344,9 @@ class Gripper(object):
                                          manufacturer=default_manufacturer,
                                          product=default_product,
                                          )
-        attributes = [name for name in dir(prop_msg)
-                      if not name.startswith('_')]
-        for attribute in attributes:
-            if type(getattr(prop_msg, attribute)) == bool:
-                setattr(prop_msg, attribute, True)
+        for idx, attr in enumerate(prop_msg.__slots__):
+            if prop_msg._slot_types[idx] == 'bool':
+                setattr(prop_msg, attr, True)
         self._prop_pub.publish(prop_msg)
 
         # Verify properties reset successfully
@@ -364,20 +364,18 @@ class Gripper(object):
 
     def reset_custom_state(self, timeout=2.0):
         """
-        Returns default state for custom grippers
+        Resets default state for custom grippers
+
+        @returns (bool) - True if custom gripper state reset successfully
         """
         state_true = EndEffectorState.STATE_TRUE
-        state_false = EndEffectorState.STATE_FALSE
         state_unknown = EndEffectorState.STATE_UNKNOWN
         # Create default state message
-        state_msg = EndEffectorState(enabled=state_true)
-        attributes = [name for name in dir(state_msg)
-                      if not name.startswith('_') and not name.isupper()]
-        for attribute in attributes:
-            attr_value = getattr(state_msg, attribute)
-            if (type(attr_value) == int and
-                attr_value == state_false):
-                setattr(state_msg, attribute, state_unknown)
+        state_msg = EndEffectorState()
+        for idx, attr in enumerate(state_msg.__slots__):
+            if 'int' in state_msg._slot_types[idx]:
+                setattr(state_msg, attr, state_unknown)
+        setattr(state_msg, 'enabled', state_true)
         self._state_pub.publish(state_msg)
 
         # Verify state reset successfully
