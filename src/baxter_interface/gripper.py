@@ -874,6 +874,16 @@ class Gripper(object):
 
     def hardware_version(self):
         """
+        [DEPRECATED: renamed to hardware_name()]
+        Returns string describing the gripper hardware.
+        """
+        rospy.logwarn("Function baxter_interface.Gripper.hardware_version()"
+                      " will be deprecated in next release. Please use"
+                      " Gripper.hardware_name() instead.")
+        return self.hardware_name()
+
+    def hardware_name(self):
+        """
         Returns string describing the gripper hardware.
         """
         return deepcopy(self._prop.product)
