@@ -49,8 +49,8 @@ from joint_trajectory_action.joint_trajectory_action import (
 
 def start_server(limb, rate, mode):
     print("Initializing node... ")
-    rospy.init_node("rsdk_joint_trajectory_action_server%s" %
-                    ("" if limb == 'both' else "_" + limb,))
+    rospy.init_node("rsdk_%s_joint_trajectory_action_server%s" %
+                    (mode, "" if limb == 'both' else "_" + limb,))
     print("Initializing joint trajectory action server...")
 
     if mode == 'velocity':
