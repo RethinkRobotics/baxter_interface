@@ -1,3 +1,18 @@
+1.0.0 (2014-5-1)
+---------------------------------
+- Adds new 'raw' joint position control mode
+- Updates robot_enable to validate SDK versus robot software versions
+- Updates joint trajectory action server adding linear, cubic and quintic spline fitting
+- Updates joint trajectory action server adding raw joint position control mode option for trajectory execution
+- Updates joint trajectory action server allowing execution parameters from messages to override parameter server options
+- Updates Limb class to use tcp_nodelay transport hint for joint states, endpoint state, and joint commands
+- Updates Limb class move_to_joint_positions adding optional accuracy threshold argument
+- Updates Gripper class to validate compatible gripper firmware versions
+- Updates Gripper class adding signaling on type, gripping, and moving state changes
+- Updates Gripper class adding convenience reset methods for reverting custom gripper properties
+- Renames Gripper class hardware_version to hardware_name
+- Fixes Head's nod incorrect wait_for validation
+
 0.7.0 (2013-11-21)
 ---------------------------------
 - Creation of baxter_interface repository from sdk-examples/baxter_interface package.
