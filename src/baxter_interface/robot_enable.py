@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -127,7 +127,7 @@ error persists. Check diagnostics or rethink.log for more info.
         error_env = """Failed to reset robot.
 Please verify that the ROS_IP or ROS_HOSTNAME environment variables are set
 and resolvable. For more information please visit:
-https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
+http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
 """
         is_reset = lambda: (self._state.enabled == False and
                             self._state.stopped == False and
@@ -205,7 +205,7 @@ https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
                 errstr_version = """RobotEnable: Software Version Mismatch.
 Robot Software version (%s) does not match local SDK version (%s). Please
 Update your Robot Software. \
-See: http://sdk-wiki.rethinkrobotics.com/index.php/Software_Update"""
+See: http://sdk.rethinkrobotics.com/wiki/Software_Update"""
                 rospy.logerr(errstr_version, robot_version, sdk_version)
                 return False
         return True
