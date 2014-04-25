@@ -468,7 +468,7 @@ class Gripper(object):
                                     self._state.ready == True),
                       timeout=timeout
         )
-        rospy.sleep(0.5)  # Allow extra time for reboot to complete
+        rospy.sleep(1.0)  # Allow extra time for reboot to complete
         self.set_parameters(defaults=True)
         return success
 
@@ -491,7 +491,7 @@ class Gripper(object):
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
 
-        _cmd_result = self._cmd_reboot(block=True, timeout=timeout)
+        self._cmd_reboot(block=True, timeout=timeout)
         rospy.sleep(delay_check)
         if self.error():
             if not self.reset(block=True, timeout=timeout):
