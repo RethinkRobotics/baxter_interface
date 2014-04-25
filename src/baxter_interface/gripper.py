@@ -49,12 +49,28 @@ from baxter_interface import settings
 
 
 class Gripper(object):
+    """
+    Interface class for a gripper on the Baxter Research Robot.
+    """
     def __init__(self, gripper, versioned=False):
         """
-        Interface class for a gripper on the Baxter Research Robot.
+        Version-checking capable constructor.
 
+        @type gripper: str
         @param gripper: robot limb <left/right> on which the gripper
                         is mounted
+        @type versioned: bool
+        @param versioned: True if Gripper firmware version should be checked
+        on initialization. [False]
+
+        The gripper firmware versions are checked against the version
+        compatibility list in L{baxter_interface.VERSIONS_SDK2GRIPPER}.
+        The compatibility list is updated in each SDK release.
+
+        By default, this interface class will not check versions,
+        but all examples using Grippers in baxter_examples pass a True
+        and will check. This behavior can be overridden by setting
+        L{baxter_interface.CHECK_VERSION} to False.
         """
         self.name = gripper + '_gripper'
         self._cmd_sender = rospy.get_name() + '_%s'
@@ -149,6 +165,12 @@ class Gripper(object):
         """
         Does a safety check on the firmware version running on electric
         grippers versus the version of the SDK software.
+
+        @rtype: bool
+        @return: True if gripper version is compatible with SDK version,
+        including if in warning list or unknown.
+
+        False if incompatible and in fatal fail list.
         """
         sdk_version = settings.SDK_VERSION
         firmware_str = self.firmware_version()
@@ -266,6 +288,10 @@ class Gripper(object):
     def valid_parameters_text(self):
         """
         Text describing valid gripper parameters.
+
+        @rtype: str
+        @return: Human readable block of text describing parameters.
+        Good for help text.
         """
         if self.type() == 'electric':
             return """Valid gripper parameters for the electric gripper are
@@ -289,6 +315,10 @@ class Gripper(object):
     def valid_parameters(self):
         """
         Returns dict of available gripper parameters with default parameters.
+
+        @rtype: dict({str:float})
+        @return: valid parameters in a code-friendly dict type.
+        Use this version in your programs.
         """
         valid = dict()
         if self.type() == 'electric':
@@ -418,14 +448,14 @@ class Gripper(object):
         """
         Power cycle the gripper, removing calibration information.
 
+        Basic call to the gripper reboot command. Waits for gripper to return
+        ready state but does not clear errors that could occur during boot.
+        Highly recommended to use the clean reboot() command instead.
+
         @type timeout: float
         @param timeout: timeout in seconds for reboot success
         @type block: bool
         @param block: command is blocking or non-blocking [False]
-
-        Basic call to the gripper reboot command. Waits for gripper to return
-        ready state but does not clear errors that could occur during boot.
-        Highly recommended to use the clean reboot() command instead.
         """
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
@@ -446,17 +476,17 @@ class Gripper(object):
         """
         "Clean" reboot of gripper, removes calibration and errors.
 
-        @type timeout: float
-        @param timeout: timeouts in seconds for reboot & reset
-        @type delay_check: float
-        @param delay_check: seconds after reboot before error check
-
         Robust version of gripper reboot command; recommended to use this
         function for rebooting grippers.
 
         Calls the basic reboot gripper command to power cycle the gripper
         (_cmd_reboot()) and then checks for errors after reboot, calling
         reset to clear errors if needed.
+
+        @type timeout: float
+        @param timeout: timeouts in seconds for reboot & reset
+        @type delay_check: float
+        @param delay_check: seconds after reboot before error check
         """
         if self.type() != 'electric':
             return self._capablity_warning('reboot')
@@ -474,12 +504,12 @@ class Gripper(object):
         """
         Clear calibration information from gripper.
 
+        Allows (and requires) new gripper calibration to be run.
+
         @type timeout: float
         @param timeout: timeout in seconds for success
         @type block: bool
         @param block: command is blocking or non-blocking [False]
-
-        Allows (and requires) new gripper calibration to be run.
         """
         if self.type() != 'electric':
             return self._capablity_warning('clear_calibration')
@@ -501,6 +531,8 @@ class Gripper(object):
         @param timeout: timeout in seconds for calibration success
         @type block: bool
         @param block: command is blocking or non-blocking [False]
+        @rtype: bool
+        @return: Returns True if calibration succeeds.
         """
         if self.type() != 'electric':
             return self._capablity_warning('calibrate')
@@ -586,8 +618,14 @@ class Gripper(object):
     def command_suction(self, block=False, timeout=5.0):
         """
         Command the gripper suction.
-        Timeout describes how long the suction will be applied while trying
-        to determine a grasp (vacuum threshold exceeded) has been achieved.
+
+        @type timeout: float
+        @param timeout: Timeout describes how long the suction will be
+        applied while trying to determine a grasp (vacuum threshold exceeded)
+        has been achieved.
+
+        @type block: bool
+        @param block: command is blocking or non-blocking [False]
         """
         if self.type() != 'suction':
             return self._capablity_warning('command_suction')
@@ -619,11 +657,11 @@ class Gripper(object):
         """
         Set the moving force threshold of the position move execution.
 
-        @type force: float
-        @param force: in % 0=none 100=max [30.0]
-
         When exceeded, the gripper will stop trying to achieve the commanded
         position.
+
+        @type force: float
+        @param force: in % 0=none 100=max [30.0]
         """
         if self.type() != 'electric':
             return self._capablity_warning('set_moving_force')
@@ -635,12 +673,12 @@ class Gripper(object):
         """
         Set holding force of successful gripper grasp.
 
-        @type force: float
-        @param force: in % 0=none 100=max [30.0]
-
         Set the force at which the gripper will continue applying after a
         position command has completed either from successfully achieving the
         commanded position, or by exceeding the moving force threshold.
+
+        @type force: float
+        @param force: in % 0=none 100=max [30.0]
         """
         if self.type() != 'electric':
             return self._capablity_warning('set_holding_force')
@@ -652,11 +690,11 @@ class Gripper(object):
         """
         Set the gripper dead band for position moves.
 
-        @type dead_band: float
-        @param dead_band: in % of full position [5.0]
-
         Set the gripper dead band describing the position error threshold
         where a move will be considered successful.
+
+        @type dead_band: float
+        @param dead_band: in % of full position [5.0]
         """
         if self.type() != 'electric':
             return self._capablity_warning('set_dead_band')
@@ -668,12 +706,12 @@ class Gripper(object):
         """
         Set suction threshold of successful grasp.
 
+        Set the gripper suction threshold describing the threshold at which
+        the measured suction (vacuum achieved) must exceed to denote a
+        successful grasp.
+
         @type threshold: float
         @param threshold: in % of measured vacuum range [18.0]
-
-        Set the gripper suction threshold describing the threshold at which the
-        measured suction (vacuum achieved) must exceed to denote a successful
-        grasp.
         """
         if self.type() != 'suction':
             return self._capablity_warning('set_vacuum_threshold')
@@ -685,15 +723,15 @@ class Gripper(object):
         """
         Sets the blow_off parameter.
 
-        @type blow_off: float
-        @param blow_off: Time in seconds to blow air on release [0.4]
-
         This parameter will be used on a stop
         command with the suction gripper, ceasing suction and blowing air
         from the suction gripper for the seconds specified by this method.
 
         Note: This blow off will only be commanded after the previous suction
         command returned a successful grasp (suction threshold was exceeded)
+
+        @type blow_off: float
+        @param blow_off: Time in seconds to blow air on release [0.4]
         """
         if self.type() != 'suction':
             return self._capablity_warning('set_blow_off')
@@ -738,6 +776,9 @@ class Gripper(object):
     def parameters(self):
         """
         Returns dict of parameters describing the gripper command execution.
+
+        @rtype: dict({str:float})
+        @return: parameters describing the gripper command execution
         """
         return deepcopy(self._parameters)
 
@@ -745,6 +786,11 @@ class Gripper(object):
         """
         Returns bool describing gripper calibration state.
         (0:Not Calibrated, 1:Calibrated)
+
+        @rtype: bool
+        @return: False if Not Calibrated, True if Calibrated.
+        Grippers that cannot calibrate should return True
+        (i.e. "Always calibrated").
         """
         return self._state.calibrated == True
 
@@ -752,12 +798,18 @@ class Gripper(object):
         """
         Returns bool describing if the gripper ready, i.e. is calibrated, not
         busy (as in resetting or rebooting), and not moving.
+
+        @rtype: bool
+        @return: True if gripper is not busy
         """
         return self._state.ready == True
 
     def moving(self):
         """
         Returns bool describing if the gripper is in motion
+
+        @rtype: bool
+        @return: True if gripper is in motion
         """
         return self._state.moving == True
 
@@ -765,6 +817,8 @@ class Gripper(object):
         """
         Returns bool describing if the position move has been preempted by a
         position command exceeding the moving_force threshold denoting a grasp.
+
+        @rtype: bool
         """
         return self._state.gripping == True
 
@@ -772,6 +826,8 @@ class Gripper(object):
         """
         Returns bool describing if the position move has completed without
         exceeding the moving_force threshold denoting a grasp
+
+        @rtype: bool
         """
         return self._state.missed == True
 
@@ -784,6 +840,8 @@ class Gripper(object):
 
         Errors can be cleared with a gripper reset. If persistent please
         contact Rethink Robotics for further debugging.
+
+        @rtype: bool
         """
         return self._state.error == True
 
@@ -791,6 +849,8 @@ class Gripper(object):
         """
         Returns the current gripper position as a ratio (0-100) of the total
         gripper travel.
+
+        @rtype: float
         """
         return deepcopy(self._state.position)
 
@@ -798,6 +858,8 @@ class Gripper(object):
         """
         Returns the current measured gripper force as a ratio (0-100) of the
         total force applicable.
+
+        @rtype: float
         """
         return deepcopy(self._state.force)
 
@@ -809,6 +871,8 @@ class Gripper(object):
         The message field contains an 8-bit integer representation of the
         vacuum sensor, this function converts that integer to the percentage of
         the full sensor range.
+
+        @rtype: float
         """
         if self.type() != 'suction':
             return self._capablity_warning('vacuum_sensor')
@@ -819,6 +883,8 @@ class Gripper(object):
         """
         Returns bool describing if the vacuum sensor threshold has been
         exceeded during a command_suction event.
+
+        @rtype: bool
         """
         if self.type() != 'suction':
             return self._capablity_warning('vacuum')
@@ -827,6 +893,8 @@ class Gripper(object):
     def blowing(self):
         """
         Returns bool describing if the gripper is currently blowing.
+
+        @rtype: bool
         """
         if self.type() != 'suction':
             return self._capablity_warning('blowing')
@@ -835,6 +903,8 @@ class Gripper(object):
     def sucking(self):
         """
         Returns bool describing if the gripper is currently sucking.
+
+        @rtype: bool
         """
         if self.type() != 'suction':
             return self._capablity_warning('sucking')
@@ -843,12 +913,16 @@ class Gripper(object):
     def has_force(self):
         """
         Returns bool describing if the gripper is capable of force control.
+
+        @rtype: bool
         """
         return self._prop.controls_force == True
 
     def has_position(self):
         """
         Returns bool describing if the gripper is capable of position control.
+
+        @rtype: bool
         """
         return self._prop.controls_position == True
 
@@ -858,6 +932,8 @@ class Gripper(object):
 
         Known types are 'suction', 'electric', and 'custom'. An unknown or no
         gripper attached to the research robot will be reported as 'custom'.
+
+        @rtype: str
         """
         return {
         EndEffectorProperties.SUCTION_CUP_GRIPPER: 'suction',
@@ -869,12 +945,15 @@ class Gripper(object):
         """
         Returns unique hardware id number. This is required for sending
         commands to the gripper.
+
+        @rtype: int
         """
         return deepcopy(self._state.id)
 
     def hardware_version(self):
         """
         [DEPRECATED: renamed to hardware_name()]
+
         Returns string describing the gripper hardware.
         """
         rospy.logwarn("Function baxter_interface.Gripper.hardware_version()"
@@ -885,11 +964,15 @@ class Gripper(object):
     def hardware_name(self):
         """
         Returns string describing the gripper hardware.
+
+        @rtype: str
         """
         return deepcopy(self._prop.product)
 
     def firmware_version(self):
         """
         Returns the current gripper firmware revision.
+
+        @rtype: str
         """
         return deepcopy(self._prop.firmware_rev)
