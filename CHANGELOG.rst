@@ -10,6 +10,7 @@
 - Updates Gripper class to validate compatible gripper firmware versions
 - Updates Gripper class adding signaling on type, gripping, and moving state changes
 - Updates Gripper class adding convenience reset methods for reverting custom gripper properties
+- Updates Navigator class wheel_changed signal to use difference since last value
 - Renames Gripper class hardware_version to hardware_name
 - Fixes Head's nod incorrect wait_for validation
 
