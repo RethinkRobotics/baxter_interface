@@ -50,6 +50,8 @@ class AnalogIO(object):
     """
     def __init__(self, component_id):
         """
+        Constructor.
+
         @param component_id: unique id of analog component
         """
         self._id = component_id

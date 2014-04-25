@@ -41,12 +41,15 @@ from baxter_interface import settings
 
 
 class Head(object):
+    """
+    Interface class for the head on the Baxter Robot.
+
+    Used to control the head pan angle and to enable/disable the head nod
+    action.
+    """
     def __init__(self):
         """
-        Interface class for the head on the Baxter Robot.
-
-        Used to control the head pan angle and to enable/disable the head nod
-        action.
+        Constructor.
         """
         self._state = dict()
 
@@ -80,7 +83,8 @@ class Head(object):
         """
         Get the current pan angle of the head.
 
-        @returns (float)    - current angle in radians
+        @rtype: float
+        @return: current angle in radians
         """
         return self._state['pan']
 
@@ -88,8 +92,8 @@ class Head(object):
         """
         Check if the head is currently nodding.
 
-        @returns (bool) - True if the head is currently nodding, False
-                          otherwise.
+        @rtype: bool
+        @return: True if the head is currently nodding, False otherwise.
         """
         return self._state['nodding']
 
@@ -97,8 +101,8 @@ class Head(object):
         """
         Check if the head is currently panning.
 
-        @returns (bool) - True if the head is currently panning, False
-                          otherwise.
+        @rtype: bool
+        @return: True if the head is currently panning, False otherwise.
         """
         return self._state['panning']
 

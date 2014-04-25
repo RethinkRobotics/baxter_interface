@@ -59,6 +59,20 @@ class RobotEnable(object):
     param_lock = Lock()
 
     def __init__(self, versioned=False):
+        """
+        Version checking capable constructor.
+
+        @type versioned: bool
+        @param versioned: True to check robot software version
+        compatibility on initialization. False (default) to ignore.
+
+        The compatibility of robot versions to SDK (baxter_interface)
+        versions is defined in the L{baxter_interface.VERSIONS_SDK2ROBOT}.
+
+        By default, the class does not check, but all examples do. The
+        example behavior can be overridden by changing the value of
+        L{baxter_interface.CHECK_VERSION} to False.
+        """
         self._state = None
         state_topic = 'robot/state'
         self._state_sub = rospy.Subscriber(state_topic,
