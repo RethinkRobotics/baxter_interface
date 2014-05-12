@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,12 +42,16 @@ class DigitalIO(object):
     Interface class for a simple Digital Input and/or Output on the
     Baxter robot
 
-    Input       - read input state
-    Output      - turn output On/Off
-                - read current output state
+    Input
+      - read input state
+    Output
+      - turn output On/Off
+      - read current output state
     """
     def __init__(self, component_id):
         """
+        Constructor.
+
         @param component_id: unique id of the digital component
         """
         self._id = component_id
@@ -120,13 +124,13 @@ class DigitalIO(object):
         """
         Control the state of the Digital Output.
 
+        Use this function for finer control over the wait_for timeout.
+
         @type value: bool
         @param value: new state {True, False} of the Output.
         @type timeout: float
         @param timeout: Seconds to wait for the io to reflect command.
                         If 0, just command once and return. [0]
-
-        Use this function for finer control over the wait_for timeout.
         """
         if not self._is_output:
             raise IOError(errno.EACCES, "Component is not an output [%s: %s]" %

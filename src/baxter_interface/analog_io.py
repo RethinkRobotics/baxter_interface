@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,12 +42,16 @@ class AnalogIO(object):
     Interface class for a simple Analog Input and/or Output on the
     Baxter robot.
 
-    Input  - read input state
-    Output - set new output state
-           - read current output state
+    Input
+      - read input state
+    Output
+      - set new output state
+      - read current output state
     """
     def __init__(self, component_id):
         """
+        Constructor.
+
         @param component_id: unique id of analog component
         """
         self._id = component_id

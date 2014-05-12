@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,14 @@ JOINT_ANGLE_TOLERANCE = 0.008726646
 HEAD_PAN_ANGLE_TOLERANCE = 0.1396263401
 
 ## Versioning
-SDK_VERSION = '0.8.0'
+SDK_VERSION = '1.0.0'
 CHECK_VERSION = True
 # Version Compatibility Maps - {current: compatible}
-VERSIONS_SDK2ROBOT = {'0.8.0': ['0.8.0']}
-VERSIONS_SDK2GRIPPER = {'0.8.0':
+VERSIONS_SDK2ROBOT = {'1.0.0': ['1.0.0']}
+VERSIONS_SDK2GRIPPER = {'1.0.0':
                           {
-                           'ok':   ['1.1.242', '0.8.0', '2.1.x'],
-                           'warn': ['0.7.0'],
-                           'fail': ['0.6.x', '1.x.x', '2.0.x'],
+                           'ok':   ['1.1.242', '1.0.0', '2.1.x'],
+                           'warn': ['0.7.0', '2.0.x'],
+                           'fail': ['0.6.x', '1.x.x'],
                           }
                          }

@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,15 @@ class Navigator(object):
     __LOCATIONS = ('left', 'right', 'torso_left', 'torso_right')
 
     def __init__(self, location):
+        """
+        Constructor.
+
+        @type location: str
+        @param location: body location (prefix) of Navigator to control.
+
+        Valid locations are in L{Navigator.__LOCATIONS}::
+          left, right, torso_left, torso_right
+        """
         if not location in self.__LOCATIONS:
             raise AttributeError("Invalid Navigator name '%s'" % (location,))
         self._id = location

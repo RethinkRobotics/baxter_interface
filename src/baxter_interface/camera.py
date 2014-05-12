@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -61,6 +61,8 @@ class CameraController(object):
 
     def __init__(self, name):
         """
+        Constructor.
+
         @param name: camera identifier.  You can get a list of valid
                      identifiers by calling the ROS service /cameras/list.
 
