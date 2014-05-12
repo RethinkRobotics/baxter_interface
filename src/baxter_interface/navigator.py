@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,15 @@ class Navigator(object):
     __LOCATIONS = ('left', 'right', 'torso_left', 'torso_right')
 
     def __init__(self, location):
+        """
+        Constructor.
+
+        @type location: str
+        @param location: body location (prefix) of Navigator to control.
+
+        Valid locations are in L{Navigator.__LOCATIONS}::
+          left, right, torso_left, torso_right
+        """
         if not location in self.__LOCATIONS:
             raise AttributeError("Invalid Navigator name '%s'" % (location,))
         self._id = location
@@ -159,15 +168,20 @@ class Navigator(object):
         if self._state == msg:
             return
 
+        old_state = self._state
+        self._state = msg
+
         buttons = [self.button0_changed,
                    self.button1_changed,
                    self.button2_changed
                    ]
         for i, signal in enumerate(buttons):
-            if self._state.buttons[i] != msg.buttons[i]:
+            if old_state.buttons[i] != msg.buttons[i]:
                 signal(msg.buttons[i])
 
-        if self._state.wheel != msg.wheel:
-            self.wheel_changed(msg.wheel)
-
-        self._state = msg
+        if old_state.wheel != msg.wheel:
+            diff = msg.wheel - old_state.wheel
+            if abs(diff % 256) < 127:
+                self.wheel_changed(diff % 256)
+            else:
+                self.wheel_changed(diff % (-256))

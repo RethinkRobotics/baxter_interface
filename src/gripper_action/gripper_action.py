@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,13 +42,15 @@ from control_msgs.msg import (
 
 import baxter_interface
 
+from baxter_interface import CHECK_VERSION
+
 
 class GripperActionServer(object):
     def __init__(self, gripper, reconfig_server):
         self._dyn = reconfig_server
         self._ee = gripper + '_gripper'
         self._ns = 'robot/end_effector/' + self._ee + '/gripper_action'
-        self._gripper = baxter_interface.Gripper(gripper)
+        self._gripper = baxter_interface.Gripper(gripper, CHECK_VERSION)
         # Store Gripper Type
         self._type = self._gripper.type()
         if self._type == 'custom':

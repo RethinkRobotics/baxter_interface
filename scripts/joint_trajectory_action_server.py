@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -39,27 +39,40 @@ import rospy
 from dynamic_reconfigure.server import Server
 
 from baxter_interface.cfg import (
-    JointTrajectoryActionServerConfig,
+    PositionJointTrajectoryActionServerConfig,
+    VelocityJointTrajectoryActionServerConfig,
 )
 from joint_trajectory_action.joint_trajectory_action import (
     JointTrajectoryActionServer,
 )
 
 
-def start_server(limb, rate):
+def start_server(limb, rate, mode):
     print("Initializing node... ")
-    rospy.init_node("rsdk_joint_trajectory_action_server%s" %
-                    ("" if limb == 'both' else "_" + limb,))
+    rospy.init_node("rsdk_%s_joint_trajectory_action_server%s" %
+                    (mode, "" if limb == 'both' else "_" + limb,))
     print("Initializing joint trajectory action server...")
 
-    dynamic_cfg_srv = Server(JointTrajectoryActionServerConfig,
-                          lambda config, level: config
-                      )
-    if limb == 'both':
-        JointTrajectoryActionServer('right', dynamic_cfg_srv, rate)
-        JointTrajectoryActionServer('left', dynamic_cfg_srv, rate)
+    if mode == 'velocity':
+        dyn_cfg_srv = Server(VelocityJointTrajectoryActionServerConfig,
+                             lambda config, level: config)
     else:
-        JointTrajectoryActionServer(limb, dynamic_cfg_srv, rate)
+        dyn_cfg_srv = Server(PositionJointTrajectoryActionServerConfig,
+                             lambda config, level: config)
+    jtas = []
+    if limb == 'both':
+        jtas.append(JointTrajectoryActionServer('right', dyn_cfg_srv,
+                                                rate, mode))
+        jtas.append(JointTrajectoryActionServer('left', dyn_cfg_srv,
+                                                rate, mode))
+    else:
+        jtas.append(JointTrajectoryActionServer(limb, dyn_cfg_srv, rate, mode))
+
+    def cleanup():
+        for j in jtas:
+            j.clean_shutdown()
+
+    rospy.on_shutdown(cleanup)
     print("Running. Ctrl-c to quit")
     rospy.spin()
 
@@ -76,8 +89,12 @@ def main():
         "-r", "--rate", dest="rate", default=100.0,
         type=float, help="trajectory control rate (Hz)"
     )
+    parser.add_argument(
+        "-m", "--mode", default='position', choices=['position', 'velocity'],
+        help="control mode for trajectory execution"
+    )
     args = parser.parse_args(rospy.myargv()[1:])
-    start_server(args.limb, args.rate)
+    start_server(args.limb, args.rate, args.mode)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Rethink Robotics
+# Copyright (c) 2013-2014, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import errno
+import re
+import sys
+
+from threading import Lock
 
 import rospy
 
@@ -39,6 +43,7 @@ import baxter_dataflow
 from baxter_core_msgs.msg import (
     AssemblyState,
 )
+from baxter_interface import settings
 
 
 class RobotEnable(object):
@@ -50,13 +55,32 @@ class RobotEnable(object):
     reset()   - reset all joints, reset all jrcp faults, disable the robot
     stop()    - stop the robot, similar to hitting the e-stop button
     """
-    def __init__(self):
+
+    param_lock = Lock()
+
+    def __init__(self, versioned=False):
+        """
+        Version checking capable constructor.
+
+        @type versioned: bool
+        @param versioned: True to check robot software version
+        compatibility on initialization. False (default) to ignore.
+
+        The compatibility of robot versions to SDK (baxter_interface)
+        versions is defined in the L{baxter_interface.VERSIONS_SDK2ROBOT}.
+
+        By default, the class does not check, but all examples do. The
+        example behavior can be overridden by changing the value of
+        L{baxter_interface.CHECK_VERSION} to False.
+        """
         self._state = None
         state_topic = 'robot/state'
         self._state_sub = rospy.Subscriber(state_topic,
                                            AssemblyState,
                                            self._state_callback
                                            )
+        if versioned and not self.version_check():
+            sys.exit(1)
 
         baxter_dataflow.wait_for(
             lambda: not self._state is None,
@@ -117,7 +141,7 @@ error persists. Check diagnostics or rethink.log for more info.
         error_env = """Failed to reset robot.
 Please verify that the ROS_IP or ROS_HOSTNAME environment variables are set
 and resolvable. For more information please visit:
-https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
+http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
 """
         is_reset = lambda: (self._state.enabled == False and
                             self._state.stopped == False and
@@ -158,3 +182,44 @@ https://github.com/RethinkRobotics/sdk-docs/wiki/Rsdk-shell#initialize
             timeout_msg="Failed to stop the robot",
             body=pub.publish,
         )
+
+    def version_check(self):
+        """
+        Verifies the version of the software running on the robot is
+        compatible with this local version of the Baxter RSDK.
+
+        Currently uses the variables in baxter_interface.settings and
+        can be overridden for all default examples by setting CHECK_VERSION
+        to False.
+        """
+        param_name = "rethink/software_version"
+        sdk_version = settings.SDK_VERSION
+
+        # get local lock for rosparam threading bug
+        with self.__class__.param_lock:
+            robot_version = rospy.get_param(param_name, None)
+
+        if not robot_version:
+            rospy.logwarn("RobotEnable: Failed to retrieve robot version "
+                          "from rosparam: %s\n"
+                          "Verify robot state and connectivity "
+                          "(i.e. ROS_MASTER_URI)", param_name)
+            return False
+        else:
+            # parse out tags
+            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)"
+                       "($|_(alpha|beta|pre|rc|p)([0-9]+))")
+            match = re.search(pattern, robot_version)
+            if not match:
+                rospy.logwarn("RobotEnable: Invalid robot version: %s",
+                              robot_version)
+                return False
+            robot_version = match.string[match.start(1):match.end(3)]
+            if robot_version not in settings.VERSIONS_SDK2ROBOT[sdk_version]:
+                errstr_version = """RobotEnable: Software Version Mismatch.
+Robot Software version (%s) does not match local SDK version (%s). Please
+Update your Robot Software. \
+See: http://sdk.rethinkrobotics.com/wiki/Software_Update"""
+                rospy.logerr(errstr_version, robot_version, sdk_version)
+                return False
+        return True
