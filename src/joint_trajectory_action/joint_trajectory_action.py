@@ -50,6 +50,7 @@ from std_msgs.msg import (
 )
 from trajectory_msgs.msg import (
     JointTrajectoryPoint,
+    JointTrajectory
 )
 
 import baxter_control
@@ -68,6 +69,7 @@ class JointTrajectoryActionServer(object):
             FollowJointTrajectoryAction,
             execute_cb=self._on_trajectory_action,
             auto_start=False)
+        self._command = rospy.Subscriber(self._ns + '/joint_trajectory/command', JointTrajectory, self._on_joint_trajectory)
         self._action_name = rospy.get_name()
         self._limb = baxter_interface.Limb(limb)
         self._enable = baxter_interface.RobotEnable()
@@ -488,3 +490,116 @@ class JointTrajectoryActionServer(object):
             self._result.error_code = self._result.GOAL_TOLERANCE_VIOLATED
             self._server.set_aborted(self._result)
         self._command_stop(goal.trajectory.joint_names, end_angles, start_time, dimensions_dict)
+
+    def _get_trajectory_parameters(self, joint_names):
+        # For each input trajectory, if path, goal, or goal_time tolerances
+        # provided, we will use these as opposed to reading from the
+        # parameter server/dynamic reconfigure
+
+        # Goal time tolerance - time buffer allowing goal constraints to be met
+        self._goal_time = self._dyn.config['goal_time']
+
+        # Stopped velocity tolerance - max velocity at end of execution
+        self._stopped_velocity = self._dyn.config['stopped_velocity_tolerance']
+
+        # Path execution and goal tolerances per joint
+        for jnt in joint_names:
+            if not jnt in self._limb.joint_names():
+                rospy.logerr(
+                    "%s: Trajectory Aborted - Provided Invalid Joint Name %s" %
+                    (self._action_name, jnt,))
+                self._result.error_code = self._result.INVALID_JOINTS
+                self._server.set_aborted(self._result)
+                return
+            # Path execution tolerance
+            path_error = self._dyn.config[jnt + '_trajectory']
+            self._path_thresh[jnt] = path_error
+
+            # Goal error tolerance
+            goal_error = self._dyn.config[jnt + '_goal']
+            self._goal_error[jnt] = goal_error
+
+            # PID gains if executing using the velocity (integral) controller
+            if self._mode == 'velocity':
+                self._pid[jnt].set_kp(self._dyn.config[jnt + '_kp'])
+                self._pid[jnt].set_ki(self._dyn.config[jnt + '_ki'])
+                self._pid[jnt].set_kd(self._dyn.config[jnt + '_kd'])
+                self._pid[jnt].initialize()
+
+    def _on_joint_trajectory(self, trajectory):
+        joint_names = trajectory.joint_names
+        trajectory_points = trajectory.points
+
+        rospy.loginfo("%s: Executing requested joint trajectory" %
+                      (self._action_name,))
+
+        # Clear spline coefficients
+        for jnt in xrange(len(joint_names)):
+            self._coeff[jnt] = [0.0] * 6
+
+        # Load parameters for trajectory
+        self._get_trajectory_parameters(joint_names)
+
+        # Create a new discretized joint trajectory
+        num_points = len(trajectory_points)
+
+        if num_points == 0:
+            rospy.logerr("%s: Empty Trajectory" % (self._command,))
+            return
+
+        end_time = trajectory_points[-1].time_from_start.to_sec()
+        control_rate = rospy.Rate(self._control_rate)
+
+        pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
+
+        #
+        start_point = JointTrajectoryPoint()
+        start_point.positions = self._get_current_position(joint_names)
+        start_point.velocities = self._get_current_velocities(joint_names)
+        start_point.accelerations = [0.0] * len(joint_names)
+
+        # Wait for the specified execution time, if not provided use now
+        start_time = trajectory.header.stamp.to_sec()
+        if start_time == 0.0:
+            start_time = rospy.get_time()
+        baxter_dataflow.wait_for(
+            lambda: rospy.get_time() >= start_time,
+            timeout=float('inf')
+        )
+
+        # Loop until end of trajectory time.  Provide a single time step
+        # of the control rate past the end to ensure we get to the end.
+        now_from_start = rospy.get_time() - start_time
+        # Keep track of current indices for spline segment generation
+        last_idx = -1
+        while (now_from_start < end_time and not rospy.is_shutdown()):
+            idx = bisect.bisect(pnt_times, now_from_start)
+
+            if idx == 0:
+                # If our current time is before the first specified point
+                # in the trajectory, then we should interpolate between
+                # our start position and that point.
+                p1 = deepcopy(start_point)
+            else:
+                p1 = deepcopy(trajectory_points[idx - 1])
+
+            if idx != num_points:
+                p2 = trajectory_points[idx]
+                # If entering a new trajectory segment, calculate coefficients
+                if last_idx != idx:
+                    self._compute_spline_coefficients(p1, p2)
+                # Find goal command point at commanded time
+                cmd_time = now_from_start - p1.time_from_start.to_sec()
+                point = self._get_point(joint_names, cmd_time)
+            else:
+                # If the current time is after the last trajectory point,
+                # just hold that position.
+                point = p1
+
+            if not self._command_joints(joint_names, point):
+                return
+
+            control_rate.sleep()
+            now_from_start = rospy.get_time() - start_time
+            last_idx = idx
+
