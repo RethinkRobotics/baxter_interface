@@ -32,6 +32,8 @@ import bisect
 from copy import deepcopy
 import math
 import operator
+import numpy as np
+import matplotlib.pyplot as plt
 
 import rospy
 
@@ -55,11 +57,13 @@ import baxter_interface
 
 
 class JointTrajectoryActionServer(object):
-    def __init__(self, limb, reconfig_server, rate=100.0, mode='position'):
+    def __init__(self, limb, reconfig_server, rate=100.0,
+                 mode='position_w_id'):
         self._dyn = reconfig_server
-        self._ns = 'robot/limb/' + limb + '/follow_joint_trajectory'
+        self._ns = 'robot/limb/' + limb
+        self._fjt_ns = self._ns + '/follow_joint_trajectory'
         self._server = actionlib.SimpleActionServer(
-            self._ns,
+            self._fjt_ns,
             FollowJointTrajectoryAction,
             execute_cb=self._on_trajectory_action,
             auto_start=False)
@@ -71,10 +75,11 @@ class JointTrajectoryActionServer(object):
         self._cuff.state_changed.connect(self._cuff_cb)
         # Verify joint control mode
         self._mode = mode
-        if self._mode != 'position' and self._mode != 'velocity':
+        if (self._mode != 'position' and self._mode != 'position_w_id'
+            and self._mode != 'velocity'):
             rospy.logerr("%s: Action Server Creation Failed - "
                          "Provided Invalid Joint Control Mode '%s' (Options: "
-                         "'position', 'velocity')" %
+                         "'position_w_id', 'position', 'velocity')" %
                     (self._action_name, self._mode,))
             return
         self._server.start()
@@ -106,6 +111,11 @@ class JointTrajectoryActionServer(object):
         self._pub_rate = rospy.Publisher(
             '/robot/joint_state_publish_rate', UInt16)
         self._pub_rate.publish(self._control_rate)
+
+        self._pub_ff_cmd = rospy.Publisher(
+            self._ns + '/inverse_dynamics_command',
+            JointTrajectoryPoint,
+            tcp_nodelay=True)
 
     def clean_shutdown(self):
         self._alive = False
@@ -202,9 +212,18 @@ class JointTrajectoryActionServer(object):
                     self._limb.exit_control_mode()
                     break
                 rospy.sleep(1.0 / self._control_rate)
-        elif self._mode == 'position':
+        elif self._mode == 'position' or self._mode == 'position_w_id':
+            if self._mode == 'position_w_id':
+                pnt = JointTrajectoryPoint()
+                pnt.time_from_start = rospy.Time.now()
+                pnt.positions = [0.0] * len(joint_names)
+                pnt.velocities = [0.0] * len(joint_names)
+                pnt.accelerations = [0.0] * len(joint_names)
             while (not self._server.is_new_goal_available() and self._alive):
                 self._limb.set_joint_positions(joint_angles, raw=True)
+                # zero inverse dynamics feedforward command
+                if self._mode == 'position_w_id':
+                    self._pub_ff_cmd.publish(pnt)
                 if self._cuff_state:
                     self._limb.exit_control_mode()
                     break
@@ -229,9 +248,12 @@ class JointTrajectoryActionServer(object):
                 return False
             if self._mode == 'velocity':
                 velocities.append(self._pid[delta[0]].compute_output(delta[1]))
-        if self._mode == 'position' and self._alive:
+        if ((self._mode == 'position' or self._mode == 'position_w_id')
+            and self._alive):
             cmd = dict(zip(joint_names, point.positions))
             self._limb.set_joint_positions(cmd, raw=True)
+            if self._mode == 'position_w_id':
+                self._pub_ff_cmd.publish(point)
         elif self._alive:
             cmd = dict(zip(joint_names, velocities))
             self._limb.set_joint_velocities(cmd)
@@ -378,6 +400,34 @@ class JointTrajectoryActionServer(object):
         joint_names = goal.trajectory.joint_names
         trajectory_points = goal.trajectory.points
 
+        #data_out = np.loadtxt('trajectory_out_right', delimiter=',',skiprows=1)
+
+#         if self._name == 'right':
+#             for point in trajectory_points:
+#                 print point
+#                 plt.subplot(3, 1, 1)
+#                 x_out = point.time_from_start.to_sec()
+#                 y_out = point.positions[0]
+#                 plt.plot(x_out, y_out, 'ro')
+#                 plt.title('Position Commanded right_s0 In')
+# 
+#                 plt.subplot(3, 1, 2)
+#                 x_out = point.time_from_start.to_sec()
+#                 y_out = point.velocities[0]
+#                 plt.plot(x_out, y_out, 'go')
+#                 plt.title('Velocity Commanded left_s0 In')
+# 
+#                 plt.subplot(3, 1, 3)
+#                 x_out = point.time_from_start.to_sec()
+#                 y_out = point.accelerations[0]
+#                 plt.plot(x_out, y_out, 'bo')
+#                 plt.title('Acceleration Commanded left_s0 In')
+
+           # plt.show()
+
+        if self._name == 'right':
+            print len(trajectory_points)
+
         rospy.loginfo("%s: Executing requested joint trajectory" %
                       (self._action_name,))
 
@@ -430,6 +480,11 @@ class JointTrajectoryActionServer(object):
         now_from_start = rospy.get_time() - start_time
         # Keep track of current indices for spline segment generation
         last_idx = -1
+        plt_pnts = list()
+        print 'END TIME' + str(now_from_start - end_time)
+
+        pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
+
         while (now_from_start < end_time and not rospy.is_shutdown()):
             idx = bisect.bisect(pnt_times, now_from_start)
 
@@ -454,6 +509,14 @@ class JointTrajectoryActionServer(object):
                 # just hold that position.
                 point = p1
 
+
+#             x_pos_out.append(point.time_from_start.to_sec())
+#             y_pos_out.append(point.positions[0])
+#             x_vel_out.append(point.time_from_start.to_sec())
+#             y_vel_out.append(point.velocities[0])
+#             x_acc_out.append(point.time_from_start.to_sec())
+#             y_acc_out.append(point.accelerations[0])
+
             if not self._command_joints(joint_names, point):
                 return
 
@@ -461,6 +524,54 @@ class JointTrajectoryActionServer(object):
             now_from_start = rospy.get_time() - start_time
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
             last_idx = idx
+
+            print 'CALCULATED:'
+            print self._get_point(joint_names, trajectory_points[idx].time_from_start.to_sec())
+            print 'ORIGINAL: '
+            print trajectory_points[idx]
+
+            point.time_from_start = now_from_start
+            plt_pnts.append(point)
+
+        if self._name == 'right':
+            print 'Number points = ' + str(len(plt_pnts))
+            for point in trajectory_points:
+                plt.subplot(3, 1, 1)
+                x_out = point.time_from_start.to_sec()
+                y_out = point.positions[0]
+                plt.plot(x_out, y_out, 'ro')
+                plt.title('Position Commanded right_s0 In')
+ 
+                plt.subplot(3, 1, 2)
+                x_out = point.time_from_start.to_sec()
+                y_out = point.velocities[0]
+                plt.plot(x_out, y_out, 'go')
+                plt.title('Velocity Commanded left_s0 In')
+ 
+                plt.subplot(3, 1, 3)
+                x_out = point.time_from_start.to_sec()
+                y_out = point.accelerations[0]
+                plt.plot(x_out, y_out, 'bo')
+                plt.title('Acceleration Commanded left_s0 In')
+            for point in plt_pnts:
+                plt.subplot(3, 1, 1)
+                x_out = point.time_from_start
+                y_out = point.positions[0]
+                plt.plot(x_out, y_out, 'bo')
+                plt.title('Position Commanded right_s0 Out')
+ 
+                plt.subplot(3, 1, 2)
+                x_out = point.time_from_start
+                y_out = point.velocities[0]
+                plt.plot(x_out, y_out, 'ro')
+                plt.title('Velocity Commanded left_s0 Out')
+ 
+                plt.subplot(3, 1, 3)
+                x_out = point.time_from_start
+                y_out = point.accelerations[0]
+                plt.plot(x_out, y_out, 'go')
+                plt.title('Acceleration Commanded left_s0 Out')
+            plt.show()
 
         # Keep trying to meet goal until goal_time constraint expired
         last = trajectory_points[-1]

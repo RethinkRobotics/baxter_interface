@@ -46,6 +46,10 @@ from joint_trajectory_action.joint_trajectory_action import (
     JointTrajectoryActionServer,
 )
 
+from trajectory_msgs.msg import (
+    JointTrajectoryPoint,
+)
+
 
 def start_server(limb, rate, mode):
     print("Initializing node... ")
@@ -90,7 +94,8 @@ def main():
         type=float, help="trajectory control rate (Hz)"
     )
     parser.add_argument(
-        "-m", "--mode", default='position', choices=['position', 'velocity'],
+        "-m", "--mode", default='position_w_id',
+        choices=['position_w_id', 'position', 'velocity'],
         help="control mode for trajectory execution"
     )
     args = parser.parse_args(rospy.myargv()[1:])
