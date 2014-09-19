@@ -94,7 +94,8 @@ class RobotEnable(object):
 
     def _toggle_enabled(self, status):
 
-        pub = rospy.Publisher('robot/set_super_enable', Bool)
+        pub = rospy.Publisher('robot/set_super_enable', Bool, 
+                              queue_size=10)
 
         baxter_dataflow.wait_for(
             test=lambda: self._state.enabled == status,
@@ -148,7 +149,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
                             self._state.error == False and
                             self._state.estop_button == 0 and
                             self._state.estop_source == 0)
-        pub = rospy.Publisher('robot/set_super_reset', Empty)
+        pub = rospy.Publisher('robot/set_super_reset', Empty, queue_size=10)
 
         if (self._state.stopped and
             self._state.estop_button == AssemblyState.ESTOP_BUTTON_PRESSED):
@@ -175,7 +176,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
         Simulate an e-stop button being pressed.  Robot must be reset to clear
         the stopped state.
         """
-        pub = rospy.Publisher('robot/set_super_stop', Empty)
+        pub = rospy.Publisher('robot/set_super_stop', Empty, queue_size=10)
         baxter_dataflow.wait_for(
             test=lambda: self._state.stopped == True,
             timeout=3.0,

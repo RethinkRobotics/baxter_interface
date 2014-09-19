@@ -86,16 +86,19 @@ class Gripper(object):
 
         self._parameters = dict()
 
-        self._cmd_pub = rospy.Publisher(ns + 'command', EndEffectorCommand)
+        self._cmd_pub = rospy.Publisher(ns + 'command', EndEffectorCommand,
+            queue_size=10)
 
         self._prop_pub = rospy.Publisher(ns + 'rsdk/set_properties',
                                          EndEffectorProperties,
-                                         latch=True
+                                         latch=True,
+                                         queue_size=10
                                          )
 
         self._state_pub = rospy.Publisher(ns + 'rsdk/set_state',
                                           EndEffectorState,
-                                          latch=True
+                                          latch=True,
+                                          queue_size=10
                                           )
 
         self._state_sub = rospy.Subscriber(ns + 'state',
