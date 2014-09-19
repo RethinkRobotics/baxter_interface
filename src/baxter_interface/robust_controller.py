@@ -51,7 +51,8 @@ class RobustController(object):
         """
         self._command_pub = rospy.Publisher(
             namespace + '/enable',
-            type(enable_msg))
+            type(enable_msg),
+            queue_size=10)
         self._status_sub = rospy.Subscriber(
             namespace + '/status',
             RobustControllerStatus,
