@@ -55,11 +55,13 @@ class Head(object):
 
         self._pub_pan = rospy.Publisher(
             '/robot/head/command_head_pan',
-            HeadPanCommand)
+            HeadPanCommand,
+            queue_size=10)
 
         self._pub_nod = rospy.Publisher(
             '/robot/head/command_head_nod',
-            Bool)
+            Bool,
+            queue_size=10)
 
         state_topic = '/robot/head/head_state'
         self._sub_state = rospy.Subscriber(
