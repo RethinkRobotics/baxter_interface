@@ -34,7 +34,10 @@ from copy import deepcopy
 import math
 import operator
 import numpy as np
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import bezier
 
 import rospy
 
@@ -142,7 +145,7 @@ class JointTrajectoryActionServer(object):
 
         # Path execution and goal tolerances per joint
         for jnt in joint_names:
-            if not jnt in self._limb.joint_names():
+            if jnt not in self._limb.joint_names():
                 rospy.logerr(
                     "%s: Trajectory Aborted - Provided Invalid Joint Name %s" %
                     (self._action_name, jnt,))
@@ -200,7 +203,7 @@ class JointTrajectoryActionServer(object):
         self._fdbk.error.positions = map(operator.sub,
                                          self._fdbk.desired.positions,
                                          self._fdbk.actual.positions
-                                     )
+                                        )
         self._fdbk.error.time_from_start = rospy.Duration.from_sec(cur_time)
         self._server.publish_feedback(self._fdbk)
 
@@ -261,205 +264,62 @@ class JointTrajectoryActionServer(object):
             self._limb.set_joint_velocities(cmd)
         return True
 
-    def _compute_spline_coefficients(self, start, end):
-        duration = (end.time_from_start.to_sec() -
-                    start.time_from_start.to_sec())
-        duration2 = math.pow(duration, 2)
-        duration3 = math.pow(duration, 3)
-        duration4 = math.pow(duration, 4)
-        duration5 = math.pow(duration, 5)
-
-        for jnt in xrange(len(start.positions)):
-            # Check if Quintic Spline is appropriate
-            # (position, velocity, acceleration provided)
-            if len(start.accelerations) != 0 and len(end.accelerations) != 0:
-                # Quintic Spline Coefficients
-                self._coeff[jnt][0] = start.positions[jnt]
-                self._coeff[jnt][1] = start.velocities[jnt]
-                self._coeff[jnt][2] = 0.5 * start.accelerations[jnt]
-                if duration == 0.0:
-                    self._coeff[jnt][3] = 0.0
-                    self._coeff[jnt][4] = 0.0
-                    self._coeff[jnt][5] = 0.0
-                else:
-                    self._coeff[jnt][3] = ((-20.0 * start.positions[jnt]
-                                            + 20.0 * end.positions[jnt]
-                                            - (3.0 * start.accelerations[jnt]
-                                               * duration2)
-                                            + (end.accelerations[jnt]
-                                               * duration2)
-                                            - (12.0 * start.velocities[jnt]
-                                               * duration)
-                                            - (8.0 * end.velocities[jnt]
-                                               * duration))
-                                           / (2.0 * duration3))
-                    self._coeff[jnt][4] = ((30.0 * start.positions[jnt]
-                                            - 30.0 * end.positions[jnt]
-                                            + (3.0 * start.accelerations[jnt]
-                                               * duration2)
-                                            - (2.0 * end.accelerations[jnt]
-                                               * duration2)
-                                            + (16.0 * start.velocities[jnt]
-                                               * duration)
-                                            + (14.0 * end.velocities[jnt]
-                                               * duration))
-                                           / (2.0 * duration4))
-                    self._coeff[jnt][5] = ((-12.0 * start.positions[jnt]
-                                            + 12.0 * end.positions[jnt]
-                                            - (start.accelerations[jnt]
-                                               * duration2)
-                                            + (end.accelerations[jnt]
-                                               * duration2)
-                                            - (6.0 * start.velocities[jnt]
-                                               * duration)
-                                            - (6.0 * end.velocities[jnt]
-                                               * duration))
-                                           / (2.0 * duration5))
-
-            # Check if Cubic Spline is appropriate
-            # (position, velocity provided)
-            elif (len(start.velocities) != 0 and len(end.velocities) != 0):
-                # Cubic Spline Coefficients
-                self._coeff[jnt][0] = start.positions[jnt]
-                self._coeff[jnt][1] = start.velocities[jnt]
-                if duration == 0.0:
-                    self._coeff[jnt][2] = 0.0
-                    self._coeff[jnt][3] = 0.0
-                else:
-                    self._coeff[jnt][2] = ((-3.0 * start.positions[jnt]
-                                            + 3.0 * end.positions[jnt]
-                                            - (2.0 * start.velocities[jnt]
-                                               * duration)
-                                            - end.velocities[jnt] * duration)
-                                           / duration2)
-                    self._coeff[jnt][3] = ((2.0 * start.positions[jnt]
-                                            - 2.0 * end.positions[jnt]
-                                            + start.velocities[jnt] * duration
-                                            + end.velocities[jnt] * duration)
-                                           / duration3)
-                self._coeff[jnt][4] = 0.0
-                self._coeff[jnt][5] = 0.0
-
-            # Linear Spline
-            # (position only)
-            else:
-                # Linear Spline
-                self._coeff[jnt][0] = start.positions[jnt]
-                if duration == 0.0:
-                    self._coeff[jnt][1] = 0.0
-                else:
-                    self._coeff[jnt][1] = ((end.positions[jnt]
-                                            - start.positions[jnt])
-                                           / duration)
-                self._coeff[jnt][2] = 0.0
-                self._coeff[jnt][3] = 0.0
-                self._coeff[jnt][4] = 0.0
-                self._coeff[jnt][5] = 0.0
-
-    def _get_point(self, joint_names, time):
+    def _get_bezier_point(self, joint_names, b_matrix, idx, t, cmd_time):
         pnt = JointTrajectoryPoint()
-        pnt.time_from_start = rospy.Duration(time)
+        pnt.time_from_start = rospy.Duration(cmd_time)
         pnt.positions = [0.0] * len(joint_names)
         pnt.velocities = [0.0] * len(joint_names)
         pnt.accelerations = [0.0] * len(joint_names)
-        time2 = math.pow(time, 2)
-        time3 = math.pow(time, 3)
-        time4 = math.pow(time, 4)
-        time5 = math.pow(time, 5)
 
         for jnt in xrange(len(joint_names)):
+            b_point = bezier.compute_point(b_matrix[jnt, :, :, :], idx, t)
             # Positions at specified time
-            pnt.positions[jnt] = (self._coeff[jnt][0]
-                                  + time * self._coeff[jnt][1]
-                                  + time2 * self._coeff[jnt][2]
-                                  + time3 * self._coeff[jnt][3]
-                                  + time4 * self._coeff[jnt][4]
-                                  + time5 * self._coeff[jnt][5]
-                                  )
-
+            pnt.positions[jnt] = b_point[0]
             # Velocities at specified time
-            pnt.velocities[jnt] = (self._coeff[jnt][1]
-                                   + 2.0 * time * self._coeff[jnt][2]
-                                   + (3.0 * time2
-                                      * self._coeff[jnt][3])
-                                   + (4.0 * time3
-                                      * self._coeff[jnt][4])
-                                   + (5.0 * time4
-                                      * self._coeff[jnt][5])
-                                   )
-
+            pnt.velocities[jnt] = b_point[1]
             # Accelerations at specified time
-            pnt.accelerations[jnt] = (2.0 * self._coeff[jnt][2]
-                                      + 6.0 * time * self._coeff[jnt][3]
-                                      + (12.0 * time2
-                                         * self._coeff[jnt][4])
-                                      + (20.0 * time3
-                                         * self._coeff[jnt][5])
-                                      )
+            pnt.accelerations[jnt] = b_point[2]
+
         return pnt
+
+    def _compute_bezier_coeff(self, joint_names, trajectory_points):
+        # Compute Full Bezier Curve
+        num_joints = len(joint_names)
+        num_traj_pts = len(trajectory_points)
+        num_traj_dim = len(['position', 'velocity', 'acceleration'])
+        num_b_values = len(['b0', 'b1', 'b2', 'b3'])
+        b_matrix = np.zeros(shape=(num_joints, num_traj_dim, num_traj_pts-1, num_b_values))
+        for jnt in xrange(num_joints):
+            traj_array = np.zeros(shape=(len(trajectory_points), num_traj_dim))
+            for idx, point in enumerate(trajectory_points):
+                traj_array[idx, :] = [point.positions[jnt], 
+                                            point.velocities[jnt], 
+                                            point.accelerations[jnt]] 
+            d_pts = bezier.compute_de_boor_control_pts(traj_array)
+            b_matrix[jnt, :, :, :] = bezier.compute_bvals(traj_array, d_pts) 
+        return b_matrix
 
     def _on_trajectory_action(self, goal):
         joint_names = goal.trajectory.joint_names
         trajectory_points = goal.trajectory.points
-
-        #data_out = np.loadtxt('trajectory_out_right', delimiter=',',skiprows=1)
-
-#         if self._name == 'right':
-#             for point in trajectory_points:
-#                 print point
-#                 plt.subplot(3, 1, 1)
-#                 x_out = point.time_from_start.to_sec()
-#                 y_out = point.positions[0]
-#                 plt.plot(x_out, y_out, 'ro')
-#                 plt.title('Position Commanded right_s0 In')
-# 
-#                 plt.subplot(3, 1, 2)
-#                 x_out = point.time_from_start.to_sec()
-#                 y_out = point.velocities[0]
-#                 plt.plot(x_out, y_out, 'go')
-#                 plt.title('Velocity Commanded left_s0 In')
-# 
-#                 plt.subplot(3, 1, 3)
-#                 x_out = point.time_from_start.to_sec()
-#                 y_out = point.accelerations[0]
-#                 plt.plot(x_out, y_out, 'bo')
-#                 plt.title('Acceleration Commanded left_s0 In')
-
-           # plt.show()
-
-        if self._name == 'right':
-            print len(trajectory_points)
-
         rospy.loginfo("%s: Executing requested joint trajectory" %
                       (self._action_name,))
-
-        # Clear spline coefficients
-        for jnt in xrange(len(joint_names)):
-            self._coeff[jnt] = [0.0] * 6
-
         # Load parameters for trajectory
         self._get_trajectory_parameters(joint_names, goal)
-
         # Create a new discretized joint trajectory
         num_points = len(trajectory_points)
-
         if num_points == 0:
             rospy.logerr("%s: Empty Trajectory" % (self._action_name,))
             self._server.set_aborted()
             return
-
-        def interp(a, b, pct):
-            return a + (b - a) * pct
-
-        def interp_positions(p1, p2, pct):
-            return map(interp, p1.positions, p2.positions, [pct] *
-                       len(p1.positions))
-
-        end_time = trajectory_points[-1].time_from_start.to_sec()
         control_rate = rospy.Rate(self._control_rate)
-
+        # Compute Full Bezier Curve Coefficients for all 7 joints
+        bezier_start = rospy.get_time()
         pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
-
+        b_matrix = self._compute_bezier_coeff(joint_names, trajectory_points)
+        bezier_end = rospy.get_time()
+        print 'Bezier Time Elapsed:' + str(bezier_start - bezier_end)
+            
         # Reset feedback/result
         start_point = JointTrajectoryPoint()
         start_point.positions = self._get_current_position(joint_names)
@@ -476,110 +336,119 @@ class JointTrajectoryActionServer(object):
             lambda: rospy.get_time() >= start_time,
             timeout=float('inf')
         )
-
         # Loop until end of trajectory time.  Provide a single time step
         # of the control rate past the end to ensure we get to the end.
-        now_from_start = rospy.get_time() - start_time
         # Keep track of current indices for spline segment generation
-        last_idx = -1
         plt_pnts = list()
-        print 'END TIME' + str(now_from_start - end_time)
-
-        pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
-
+        point = start_point 
+        now_from_start = rospy.get_time() - start_time
+        end_time = trajectory_points[-1].time_from_start.to_sec()
         while (now_from_start < end_time and not rospy.is_shutdown()):
-            #Acquire Mutex lock
+            #Acquire Mutex
             self._mutex.acquire()
             now = rospy.get_time()
             now_from_start = now - start_time
             idx = bisect.bisect(pnt_times, now_from_start)
-
-            if idx == 0:
-                # If our current time is before the first specified point
-                # in the trajectory, then we should interpolate between
-                # our start position and that point.
-                p1 = deepcopy(start_point)
+            #Calculate percentage of time passed in this interval
+            if idx == num_points:
+                cmd_time = now_from_start - pnt_times[-1]
+                t = 1.0
+            elif idx > 0:
+                cmd_time = (now_from_start - pnt_times[idx-1])
+                t = cmd_time / (pnt_times[idx] - pnt_times[idx-1])
             else:
-                p1 = deepcopy(trajectory_points[idx - 1])
+                cmd_time = 0
+                t = 0
 
-            if idx != num_points:
-                p2 = trajectory_points[idx]
-                # If entering a new trajectory segment, calculate coefficients
-                if last_idx < idx:
-                    self._compute_spline_coefficients(p1, p2)
-                    last_idx = idx
-                # Find goal command point at commanded time
-                cmd_time = now_from_start - p1.time_from_start.to_sec()
-                point = self._get_point(joint_names, cmd_time)
+            # If the current time is after the last trajectory point,
+            # just hold that position.
+            if idx < num_points:
+                point = self._get_bezier_point(joint_names, b_matrix, idx, t, cmd_time)
             else:
-                # If the current time is after the last trajectory point,
-                # just hold that position.
-                point = p1
+                point = self._get_bezier_point(joint_names, b_matrix, num_points, t, cmd_time)
 
-
-#             x_pos_out.append(point.time_from_start.to_sec())
-#             y_pos_out.append(point.positions[0])
-#             x_vel_out.append(point.time_from_start.to_sec())
-#             y_vel_out.append(point.velocities[0])
-#             x_acc_out.append(point.time_from_start.to_sec())
-#             y_acc_out.append(point.accelerations[0])
-
+            # Command Joint Position, Velocity, Acceleration
             command_success = self._command_joints(joint_names, point)
-            # Release the Mutex from the critical section
-            self._mutex.release() 
+            # Release the Mutex
+            self._mutex.release()
             if not command_success:
                 return
-            control_rate.sleep()
-            self._update_feedback(deepcopy(point), joint_names, now_from_start)
 
-            #print 'CALCULATED:'
-            #print self._get_point(joint_names, trajectory_points[idx].time_from_start.to_sec())
-            #print 'ORIGINAL: '
-            #print trajectory_points[idx]
+            self._update_feedback(deepcopy(point), joint_names, now_from_start)
+            control_rate.sleep()
 
             point.time_from_start = now_from_start
             plt_pnts.append(point)
 
-        if self._name == 'right':
+        if self._name == 'left':
+            joint_no = 1
             print 'Number points = ' + str(len(plt_pnts))
-            for point in trajectory_points:
+            traj_array = np.zeros((len(trajectory_points),3))
+            for idx, point in enumerate(trajectory_points):
                 plt.subplot(3, 1, 1)
                 x_out = point.time_from_start.to_sec()
-                y_out = point.positions[0]
-                plt.plot(x_out, y_out, 'ro')
+                y_pos_out = point.positions[joint_no]
+                print "timestamps: {0}".format(x_out)
+                print "pos: {0}".format(y_pos_out)
+                plt.plot(x_out, y_pos_out, 'ro')
                 plt.title('Position Commanded right_s0 In')
  
                 plt.subplot(3, 1, 2)
                 x_out = point.time_from_start.to_sec()
-                y_out = point.velocities[0]
-                plt.plot(x_out, y_out, 'go')
+                y_vel_out = point.velocities[joint_no]
+                print "timestamps: {0}".format(x_out)
+                print "vel: {0}".format(y_vel_out)
+                plt.plot(x_out, y_vel_out, 'go')
                 plt.title('Velocity Commanded left_s0 In')
  
                 plt.subplot(3, 1, 3)
                 x_out = point.time_from_start.to_sec()
-                y_out = point.accelerations[0]
-                plt.plot(x_out, y_out, 'bo')
+                y_accel_out = point.accelerations[joint_no]
+                print "timestamps: {0}".format(x_out)
+                print "accel: {0}".format(y_accel_out)
+                plt.plot(x_out, y_accel_out, 'bo')
                 plt.title('Acceleration Commanded left_s0 In')
-            for point in plt_pnts:
+                traj_array[idx, range(0,3)] = [y_pos_out, y_vel_out, y_accel_out] 
+            pnt_array = np.zeros((len(plt_pnts),3))
+            for idx, point in enumerate(plt_pnts):
                 plt.subplot(3, 1, 1)
                 x_out = point.time_from_start
-                y_out = point.positions[0]
-                plt.plot(x_out, y_out, 'bo')
+                y_pos_out = point.positions[joint_no]
+                plt.plot(x_out, y_pos_out, 'bo')
                 plt.title('Position Commanded right_s0 Out')
  
                 plt.subplot(3, 1, 2)
                 x_out = point.time_from_start
-                y_out = point.velocities[0]
-                plt.plot(x_out, y_out, 'ro')
+                y_vel_out = point.velocities[joint_no]
+                plt.plot(x_out, y_vel_out, 'ro')
                 plt.title('Velocity Commanded left_s0 Out')
  
                 plt.subplot(3, 1, 3)
                 x_out = point.time_from_start
-                y_out = point.accelerations[0]
-                plt.plot(x_out, y_out, 'go')
+                y_accel_out = point.accelerations[joint_no]
+                plt.plot(x_out, y_accel_out, 'go')
                 plt.title('Acceleration Commanded left_s0 Out')
+                pnt_array[idx, range(0,3)] = [y_pos_out, y_vel_out, y_accel_out] 
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot(pnt_array[:,0], pnt_array[:,1], pnt_array[:,2])
+            ax.plot(traj_array[:,0], traj_array[:,1], traj_array[:,2], 'g*')
+            ax.set_xlabel("Position")
+            ax.set_ylabel("Velocity")
+            ax.set_zlabel("Acceleration")
+            ax.set_title("PR2 Quintic")
+            fig = plt.figure()
+            d_pts = bezier.compute_de_boor_control_pts(traj_array)
+            bvals = bezier.compute_bvals(traj_array, d_pts)
+            b_curve = bezier.compute_curve(bvals, 50)
+            ab = fig.gca(projection='3d')
+            ab.plot(b_curve[:,0], b_curve[:,1], b_curve[:,2])
+            ab.plot(traj_array[:,0], traj_array[:,1], traj_array[:,2], 'g*')
+            ab.set_xlabel("Position")
+            ab.set_ylabel("Velocity")
+            ab.set_zlabel("Acceleration")
+            ax.set_title("Bezier Cubic")
             plt.show()
-
         # Keep trying to meet goal until goal_time constraint expired
         last = trajectory_points[-1]
         last_time = trajectory_points[-1].time_from_start.to_sec()
