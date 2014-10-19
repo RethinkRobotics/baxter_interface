@@ -29,6 +29,7 @@
 Baxter RSDK Joint Trajectory Action Server
 """
 import bisect
+import threading
 from copy import deepcopy
 import math
 import operator
@@ -59,6 +60,7 @@ import baxter_interface
 class JointTrajectoryActionServer(object):
     def __init__(self, limb, reconfig_server, rate=100.0,
                  mode='position_w_id'):
+        self._mutex = threading.Lock()
         self._dyn = reconfig_server
         self._ns = 'robot/limb/' + limb
         self._fjt_ns = self._ns + '/follow_joint_trajectory'
@@ -486,6 +488,10 @@ class JointTrajectoryActionServer(object):
         pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
 
         while (now_from_start < end_time and not rospy.is_shutdown()):
+            #Acquire Mutex lock
+            self._mutex.acquire()
+            now = rospy.get_time()
+            now_from_start = now - start_time
             idx = bisect.bisect(pnt_times, now_from_start)
 
             if idx == 0:
@@ -499,8 +505,9 @@ class JointTrajectoryActionServer(object):
             if idx != num_points:
                 p2 = trajectory_points[idx]
                 # If entering a new trajectory segment, calculate coefficients
-                if last_idx != idx:
+                if last_idx < idx:
                     self._compute_spline_coefficients(p1, p2)
+                    last_idx = idx
                 # Find goal command point at commanded time
                 cmd_time = now_from_start - p1.time_from_start.to_sec()
                 point = self._get_point(joint_names, cmd_time)
@@ -517,18 +524,18 @@ class JointTrajectoryActionServer(object):
 #             x_acc_out.append(point.time_from_start.to_sec())
 #             y_acc_out.append(point.accelerations[0])
 
-            if not self._command_joints(joint_names, point):
+            command_success = self._command_joints(joint_names, point)
+            # Release the Mutex from the critical section
+            self._mutex.release() 
+            if not command_success:
                 return
-
             control_rate.sleep()
-            now_from_start = rospy.get_time() - start_time
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
-            last_idx = idx
 
-            print 'CALCULATED:'
-            print self._get_point(joint_names, trajectory_points[idx].time_from_start.to_sec())
-            print 'ORIGINAL: '
-            print trajectory_points[idx]
+            #print 'CALCULATED:'
+            #print self._get_point(joint_names, trajectory_points[idx].time_from_start.to_sec())
+            #print 'ORIGINAL: '
+            #print trajectory_points[idx]
 
             point.time_from_start = now_from_start
             plt_pnts.append(point)
