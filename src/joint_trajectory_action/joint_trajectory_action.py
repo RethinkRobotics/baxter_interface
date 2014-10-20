@@ -369,17 +369,16 @@ class JointTrajectoryActionServer(object):
 
             # Command Joint Position, Velocity, Acceleration
             command_success = self._command_joints(joint_names, point)
+            point.time_from_start = now_from_start
+            #plt_pnts.append(point)
+            self._update_feedback(deepcopy(point), joint_names, now_from_start)
             # Release the Mutex
             self._mutex.release()
             if not command_success:
                 return
-
-            self._update_feedback(deepcopy(point), joint_names, now_from_start)
             control_rate.sleep()
 
-            point.time_from_start = now_from_start
-            plt_pnts.append(point)
-
+        """
         if self._name == 'left':
             joint_no = 1
             print 'Number points = ' + str(len(plt_pnts))
@@ -449,6 +448,7 @@ class JointTrajectoryActionServer(object):
             ab.set_zlabel("Acceleration")
             ax.set_title("Bezier Cubic")
             plt.show()
+        """
         # Keep trying to meet goal until goal_time constraint expired
         last = trajectory_points[-1]
         last_time = trajectory_points[-1].time_from_start.to_sec()
