@@ -205,14 +205,15 @@ def compute_point(bvals, b_index, t):
     """
     if b_index <= 0:
         b_point = bvals[:, 0, 0]
+        print "B Point Start: {0}".format(b_point)
+    elif b_index > bvals.shape[1]:
+        b_point = bvals[:, -1, -1]
+        print "B Point End: {0}".format(b_point)
     else:
         t = 0.0 if t < 0.0 else t
         t = 1.0 if t > 1.0 else t
         num_axes = bvals.shape[0]
         b_point = np.zeros(num_axes)
-        if b_index >= bvals.shape[1]:
-            b_index = bvals.shape[1]
-            t = 1.0
         for current_axis in range(0, num_axes):
             (b0, b1, b2, b3) = bvals[current_axis, b_index-1, range(4)]
             b_point[current_axis] = (pow((1-t), 3)*b0 +
