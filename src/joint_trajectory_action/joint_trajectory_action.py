@@ -277,8 +277,10 @@ class JointTrajectoryActionServer(object):
             pnt.positions[jnt] = b_point[0]
             # Velocities at specified time
             pnt.velocities[jnt] = b_point[1]
+            #pnt.velocities[jnt] = 0.0
             # Accelerations at specified time
             pnt.accelerations[jnt] = b_point[2]
+            #pnt.accelerations[jnt] = 0.0
 
         return pnt
 
@@ -313,6 +315,11 @@ class JointTrajectoryActionServer(object):
             self._server.set_aborted()
             return
         control_rate = rospy.Rate(self._control_rate)
+	#Force Accelerations to zero at the final timestep
+	#Perhaps change this if you wish to spline trajectories together
+        trajectory_points[0].accelerations = [0.0] * len(joint_names)
+        trajectory_points[-1].accelerations = [0.0] * len(joint_names)
+            
         # Compute Full Bezier Curve Coefficients for all 7 joints
         bezier_start = rospy.get_time()
         pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
