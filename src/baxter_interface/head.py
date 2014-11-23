@@ -25,6 +25,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from copy import deepcopy
+from math import fabs
+
 import rospy
 
 from std_msgs.msg import (
@@ -52,6 +55,7 @@ class Head(object):
         Constructor.
         """
         self._state = dict()
+        self._parameters = dict()
 
         self._pub_pan = rospy.Publisher(
             '/robot/head/command_head_pan',
@@ -73,6 +77,65 @@ class Head(object):
             timeout_msg=("Failed to get current head state from %s" %
                          (state_topic,)),
         )
+
+        self.set_parameters(defaults=True)
+
+    def parameters(self):
+        """
+        Returns dict of parameters describing the head command execution.
+
+        @rtype: dict({str:float})
+        @return: parameters describing the head command execution
+        """
+        return deepcopy(self._parameters)
+
+    def set_parameters(self, parameters=None, defaults=False):
+        """
+        Set the parameters that will describe the position command execution.
+
+        @type parameters: dict({str:float})
+        @param parameters: dictionary of parameter:value
+
+        Percentage of maximum (0-100) for each parameter
+        """
+        valid_parameters = self.valid_parameters()
+        if defaults:
+            self._parameters = valid_parameters
+        if parameters is None:
+            parameters = dict()
+        for key in parameters.keys():
+            if key in valid_parameters.keys():
+                self._parameters[key] = parameters[key]
+            else:
+                msg = ("Invalid parameter: %s provided. %s" %
+                       (key, self.valid_parameters_text(),))
+                rospy.logwarn(msg)
+
+    def valid_parameters(self):
+        """
+        Returns dict of available gripper parameters with default parameters.
+
+        @rtype: dict({str:float})
+        @return: valid parameters in a code-friendly dict type.
+        Use this version in your programs.
+        """
+        valid = dict({'dead_zone': 0.1,
+                      })
+        return valid
+
+    def valid_parameters_text(self):
+        """
+        Text describing valid head parameters.
+
+        @rtype: str
+        @return: Human readable block of text describing parameters.
+        Good for help text.
+        """
+        return """Valid gripper parameters for the electric gripper are
+        PARAMETERS:
+        dead_zone - Position deadband within move considered successful
+        ALL PARAMETERS (0-100)
+        """
 
     def _on_head_state(self, msg):
         self._state['pan'] = msg.pan
