@@ -38,10 +38,12 @@ baxter_interface Repository Overview
      |   +-- baxter_dataflow/                  timing/program flow utilities
      |   +-- joint_trajectory_action/          joint trajectory action implementation
      |   +-- gripper_action/                   gripper action implementation
+     |   +-- head_action/                      head action implementation
      |
      +-- scripts/                              action server executables
      |   +-- joint_trajectory_action_server.py
      |   +-- gripper_action_server.py
+     |   +-- head_action_server.py
      |
      +-- cfg/                                  dynamic reconfigure action configs
 
