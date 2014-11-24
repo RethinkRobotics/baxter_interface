@@ -102,7 +102,11 @@ def compute_de_boor_control_pts(points_array, d0=None,
             x[N-2, 0] = 6*points_array[-2, col] - 1.5*dN[0, col]
             x[0, 0] = 6*points_array[1, col] - 1.5*d0[0, col]
         x[range(1, N-3+1), 0] = 6*points_array[range(2, N-2+1), col]
-        d_pts[2:N+1, col] = np.linalg.solve(A, x).T
+        # Solve bezier interpolation
+        if N > 2:
+            d_pts[2:N+1, col] = np.linalg.solve(A, x).T
+        else:
+            d_pts[2, col] = x / A
     # Store off start and end positions
     d_pts[0, :] = points_array[0, :]
     d_pts[-1, :] = points_array[-1, :]
@@ -203,12 +207,12 @@ def compute_point(bvals, b_index, t):
         b_point: current position in k dimensions
             numpy.array of size 1 by k
     """
-    if b_index <= 0:
+    if b_index < 0:
         b_point = bvals[:, 0, 0]
-        print "B Point Start: {0}".format(b_point)
+        print "B Point Start: {0}".format(b_point) # FIXME remove
     elif b_index > bvals.shape[1]:
         b_point = bvals[:, -1, -1]
-        print "B Point End: {0}".format(b_point)
+        print "B Point End: {0}".format(b_point) #FIXME remove
     else:
         t = 0.0 if t < 0.0 else t
         t = 1.0 if t > 1.0 else t
