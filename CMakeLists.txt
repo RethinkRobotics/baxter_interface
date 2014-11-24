@@ -20,6 +20,7 @@ generate_dynamic_reconfigure_options(
   cfg/PositionJointTrajectoryActionServer.cfg
   cfg/VelocityJointTrajectoryActionServer.cfg
   cfg/GripperActionServer.cfg
+  cfg/HeadActionServer.cfg
 )
 
 catkin_package(
