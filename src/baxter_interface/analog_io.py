@@ -79,7 +79,8 @@ class AnalogIO(object):
         if self._is_output:
             self._pub_output = rospy.Publisher(
                 type_ns + '/command',
-                AnalogOutputCommand)
+                AnalogOutputCommand,
+                queue_size=10)
 
     def _on_io_state(self, msg):
         """

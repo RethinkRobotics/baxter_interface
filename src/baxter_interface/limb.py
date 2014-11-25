@@ -85,17 +85,20 @@ class Limb(object):
         self._pub_speed_ratio = rospy.Publisher(
             ns + 'set_speed_ratio',
             Float64,
-            latch=True)
+            latch=True,
+            queue_size=10)
 
         self._pub_joint_cmd = rospy.Publisher(
             ns + 'joint_command',
             JointCommand,
-            tcp_nodelay=True)
+            tcp_nodelay=True,
+            queue_size=1)
 
         self._pub_joint_cmd_timeout = rospy.Publisher(
             ns + 'joint_command_timeout',
             Float64,
-            latch=True)
+            latch=True,
+            queue_size=10)
 
         _cartesian_state_sub = rospy.Subscriber(
             ns + 'endpoint_state',
