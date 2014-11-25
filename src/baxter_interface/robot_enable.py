@@ -207,15 +207,23 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
             return False
         else:
             # parse out tags
-            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)"
-                       "($|_(alpha|beta|pre|rc|p)([0-9]+))")
+            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)")
             match = re.search(pattern, robot_version)
             if not match:
                 rospy.logwarn("RobotEnable: Invalid robot version: %s",
                               robot_version)
                 return False
-            robot_version = match.string[match.start(1):match.end(3)]
-            if robot_version not in settings.VERSIONS_SDK2ROBOT[sdk_version]:
+            robot_version = match.string[match.start(1):match.end(4)]
+            def is_match(ok_version, robot_version):
+                if ok_version == robot_version:
+                    return True
+                for i in range(len(ok_version)):
+                    if (ok_version[i] != robot_version[i]
+                            and ok_version[i] != 'x'):
+                        return False
+                return True
+            if not any(is_match(sdk, robot_version) for sdk
+                       in settings.VERSIONS_SDK2ROBOT[sdk_version]):
                 errstr_version = """RobotEnable: Software Version Mismatch.
 Robot Software version (%s) does not match local SDK version (%s). Please
 Update your Robot Software. \
