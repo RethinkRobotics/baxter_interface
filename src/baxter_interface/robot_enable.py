@@ -199,7 +199,6 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
         # get local lock for rosparam threading bug
         with self.__class__.param_lock:
             robot_version = rospy.get_param(param_name, None)
-
         if not robot_version:
             rospy.logwarn("RobotEnable: Failed to retrieve robot version "
                           "from rosparam: %s\n"
@@ -207,9 +206,8 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
                           "(i.e. ROS_MASTER_URI)", param_name)
             return False
         else:
-            # parse out tags
-            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)"
-                       "($|_(alpha|beta|pre|rc|p)([0-9]+))")
+            # parse out first 3 digits of robot version tag
+            pattern = ("^([0-9]+)\.([0-9]+)\.([0-9]+)")
             match = re.search(pattern, robot_version)
             if not match:
                 rospy.logwarn("RobotEnable: Invalid robot version: %s",
