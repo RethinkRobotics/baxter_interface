@@ -176,7 +176,7 @@ class Gripper(object):
                 float_time = time.mktime(time.strptime(version_str,
                                                        time_format))
             except ValueError:
-                rospy.logerr(("%s %s - The %s "
+                rospy.logerr(("%s %s - The Gripper's %s "
                               "timestamp does not meet python time formating "
                               "requirements: %s does not map "
                               "to '%s'"),
@@ -197,18 +197,18 @@ class Gripper(object):
         False if incompatible and in fatal fail list.
         """
         sdk_version = settings.SDK_VERSION
-        firmware_str = self.firmware_build_date()
+        firmware_date_str = self.firmware_build_date()
         if self.type() != 'electric':
             rospy.logwarn("%s %s (%s): Version Check not needed",
-                          self.name, self.type(), firmware_str)
+                          self.name, self.type(), firmware_date_str)
             return True
-        if not firmware_str:
-            rospy.logerr("%s %s: Failed to retrieve valid version during"
+        if not firmware_date_str:
+            rospy.logerr("%s %s: Failed to retrieve version string during"
                           " Version Check.", self.name, self.type())
             return False
         firmware_time = self._version_str_to_time(
-                         firmware_str,
-                         "current gripper's firmware")
+                         firmware_date_str,
+                         "current firmware")
         warn_time = self._version_str_to_time(
                          settings.VERSIONS_SDK2GRIPPER[sdk_version]['warn'],
                          "baxter_interface settings.py firmware 'warn'")
@@ -218,27 +218,37 @@ class Gripper(object):
         if firmware_time > warn_time:
             return True
         elif firmware_time <= warn_time and firmware_time > fail_time:
-            rospy.logwarn("%s %s: Gripper Firmware version built on date (%s) is "
-                          "not up-to-date for SDK Version (%s). Please use the "
-                          "Robot's Field-Service-Menu to Upgrade your "
+            rospy.logwarn("%s %s: Gripper Firmware version built on date (%s) "
+                          "is not up-to-date for SDK Version (%s). Please use "
+                          "the Robot's Field-Service-Menu to Upgrade your "
                           "Gripper Firmware.",
-                          self.name, self.type(), firmware_str, sdk_version)
+                          self.name, self.type(),
+                          firmware_date_str, sdk_version)
             return True
         elif firmware_time <= fail_time and firmware_time > 0.0:
-            rospy.logerr("%s %s: Gripper Firmware version built on date (%s) is "
-                           "*incompatible* with SDK Version (%s). Please use "
-                           "the Robot's Field-Service-Menu to Upgrade your "
-                           "Gripper Firmware.",
-                           self.name, self.type(), firmware_str, sdk_version)
+            rospy.logerr("%s %s: Gripper Firmware version built on date (%s) "
+                         "is *incompatible* with SDK Version (%s). Please use "
+                         "the Robot's Field-Service-Menu to Upgrade your "
+                         "Gripper Firmware.",
+                         self.name, self.type(),
+                         firmware_date_str, sdk_version)
             return False
         else:
-            # Legacy Gripper version 1.1.242 cannot be updated
-            # This must have a Legacy Gripper build date of 0.0, so it passes
-            rospy.logwarn("%s %s: Legacy Gripper's Firmware cannot be updated. "
-                          "Use caution and avoid opening this gripper at 100%% speed "
-                          "to prevent jamming.",
-                          self.name, self.type())
-            return True
+            legacy_str = '1.1.242'
+            if self.firmware_version()[0:len(legacy_str)] == legacy_str:
+                # Legacy Gripper version 1.1.242 cannot be updated
+                # This must have a Legacy Gripper build date of 0.0, 
+                # so it passes
+                return True
+            else:
+                rospy.logerr("%s %s: Gripper Firmware version built on " 
+                          "date (%s) does not fall within any known Gripper "
+                          "Firmware Version dates for SDK (%s). Use the "
+                          "Robot's Field-Service-Menu to Upgrade your Gripper " 
+                          "Firmware.",
+                          self.name, self.type(),
+                          firmware_date_str, sdk_version)
+                return False
 
     def command(self, cmd, block=False, test=lambda: True,
                  timeout=0.0, args=None):
