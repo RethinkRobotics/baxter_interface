@@ -27,6 +27,7 @@
 
 import re
 import sys
+import time
 
 from copy import deepcopy
 from math import fabs
@@ -164,9 +165,29 @@ class Gripper(object):
                (self.name, self.type(), cmd))
         rospy.logwarn(msg)
 
+    def _version_str_to_time(self, version_str, version_type):
+        float_time = 0.0
+        time_format = r"%Y/%m/%d %H:%M:%S"
+        # strptime errors when all zeros are given,
+        # so instead, return the initialized value
+        # of float_time
+        if version_str != '0000/0/0 0:0:00':
+            try:
+                float_time = time.mktime(time.strptime(version_str,
+                                                       time_format))
+            except ValueError:
+                rospy.logerr(("%s %s - The %s "
+                              "timestamp does not meet python time formating "
+                              "requirements: %s does not map "
+                              "to '%s'"),
+                              self.name, self.type(), version_type,
+                              version_str, time_format)
+                sys.exit(1)
+        return float_time
+
     def version_check(self):
         """
-        Does a safety check on the firmware version running on electric
+        Does a safety check on the firmware build date of the electric
         grippers versus the version of the SDK software.
 
         @rtype: bool
@@ -177,7 +198,6 @@ class Gripper(object):
         """
         sdk_version = settings.SDK_VERSION
         firmware_str = self.firmware_version()
-
         if self.type() != 'electric':
             rospy.logwarn("%s %s (%s): Version Check not needed",
                           self.name, self.type(), firmware_str)
@@ -186,56 +206,38 @@ class Gripper(object):
             rospy.logerr("%s %s: Failed to retrieve valid version during"
                           " Version Check.", self.name, self.type())
             return False
-
-        # parse out tags
-        grip_version = firmware_str.split()[0]
-
-        def is_match(spec, grip):
-            if spec == grip:
-                return True
-
-            pattern = ("([0-9x]+)\.([0-9x]+)\.([0-9x]+)"
-                   "($|_(alpha|beta|pre|rc|p)([0-9]+))")
-            grip_match = re.search(pattern, grip)
-            spec_match = re.search(pattern, spec)
-            if not grip_match or not spec_match:
-                if not spec_match:
-                    rospy.logerr("Bad Gripper Version Spec: %s", spec)
-                    return False
-                rospy.logwarn("%s %s: Version Check invalid gripper "
-                              "version formats: %s for %s",
-                              self.name, self.type(), firmware_str, spec)
-                return False
-            for i in range(1, 4):
-                if (grip_match.group(i) != spec_match.group(i)
-                        and spec_match.group(i) != 'x'):
-                    return False
+        firmware_time = self._version_str_to_time(
+                         firmware_str,
+                         "current gripper's firmware")
+        warn_time = self._version_str_to_time(
+                         settings.VERSIONS_SDK2GRIPPER[sdk_version]['warn'],
+                         "baxter_interface settings.py firmware 'warn'")
+        fail_time = self._version_str_to_time(
+                         settings.VERSIONS_SDK2GRIPPER[sdk_version]['fail'],
+                         "baxter_interface settings.py firmware 'fail'")
+        if firmware_time > warn_time:
             return True
-
-        if any(is_match(sdk, grip_version) for sdk
-               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['ok']):
-            return True
-        elif any(is_match(sdk, grip_version) for sdk
-               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['warn']):
-            rospy.logwarn("%s %s: Gripper Firmware version (%s) is not up-to"
-                          "-date for SDK Version (%s). Please use the "
+        elif firmware_time <= warn_time and firmware_time > fail_time:
+            rospy.logwarn("%s %s: Gripper Firmware version built on date (%s) is "
+                          "not up-to-date for SDK Version (%s). Please use the "
                           "Robot's Field-Service-Menu to Upgrade your "
                           "Gripper Firmware.",
                           self.name, self.type(), firmware_str, sdk_version)
             return True
-        elif any(is_match(sdk, grip_version) for sdk
-               in settings.VERSIONS_SDK2GRIPPER[sdk_version]['fail']):
-            rospy.logerr("%s %s: Gripper Firmware version (%s) is "
+        elif firmware_time <= fail_time and firmware_time > 0.0:
+            rospy.logerr("%s %s: Gripper Firmware version built on date (%s) is "
                            "*incompatible* with SDK Version (%s). Please use "
                            "the Robot's Field-Service-Menu to Upgrade your "
                            "Gripper Firmware.",
                            self.name, self.type(), firmware_str, sdk_version)
             return False
         else:
-            rospy.logwarn("%s %s: Gripper Firmware version (%s) does not "
-                          "match SDK Version (%s). Use the Robot's Field-"
-                          "Service-Menu to Upgrade your Gripper Firmware.",
-                          self.name, self.type(), firmware_str, sdk_version)
+            # Legacy Gripper version 1.1.242 cannot be updated
+            # This must have a Legacy Gripper build date of 0.0, so it passes
+            rospy.logwarn("%s %s: Legacy Gripper's Firmware cannot be updated. "
+                          "Use caution and avoid opening this gripper at 100%% speed "
+                          "to prevent jamming.",
+                          self.name, self.type())
             return True
 
     def command(self, cmd, block=False, test=lambda: True,
@@ -953,17 +955,6 @@ class Gripper(object):
         """
         return deepcopy(self._state.id)
 
-    def hardware_version(self):
-        """
-        [DEPRECATED: renamed to hardware_name()]
-
-        Returns string describing the gripper hardware.
-        """
-        rospy.logwarn("Function baxter_interface.Gripper.hardware_version()"
-                      " will be deprecated in next release. Please use"
-                      " Gripper.hardware_name() instead.")
-        return self.hardware_name()
-
     def hardware_name(self):
         """
         Returns string describing the gripper hardware.
@@ -978,4 +969,4 @@ class Gripper(object):
 
         @rtype: str
         """
-        return deepcopy(self._prop.firmware_rev)
+        return deepcopy(self._prop.firmware_date)
