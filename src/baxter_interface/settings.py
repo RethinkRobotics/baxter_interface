@@ -35,7 +35,7 @@ CHECK_VERSION = True
 VERSIONS_SDK2ROBOT = {'1.1.0': ['1.1.0']}
 VERSIONS_SDK2GRIPPER = {'1.1.0':
                           {
-                           'warn': '2014/5/20 23:59:59',  # Version 1.0.0
-                           'fail': '2013/10/31 23:59:59', # Version 0.6.2
+                           'warn': '2014/5/20 00:00:00',  # Version 1.0.0
+                           'fail': '2013/10/15 00:00:00', # Version 0.6.2
                           }
                          }
