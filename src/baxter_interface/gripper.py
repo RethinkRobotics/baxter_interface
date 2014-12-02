@@ -197,7 +197,7 @@ class Gripper(object):
         False if incompatible and in fatal fail list.
         """
         sdk_version = settings.SDK_VERSION
-        firmware_str = self.firmware_version()
+        firmware_str = self.firmware_build_date()
         if self.type() != 'electric':
             rospy.logwarn("%s %s (%s): Version Check not needed",
                           self.name, self.type(), firmware_str)
@@ -963,10 +963,18 @@ class Gripper(object):
         """
         return deepcopy(self._prop.product)
 
+    def firmware_build_date(self):
+        """
+        Returns the build date of the firmware on the current gripper.
+
+        @rtype: str
+        """
+        return deepcopy(self._prop.firmware_date)
+
     def firmware_version(self):
         """
         Returns the current gripper firmware revision.
 
         @rtype: str
         """
-        return deepcopy(self._prop.firmware_date)
+        return deepcopy(self._prop.firmware_rev)
