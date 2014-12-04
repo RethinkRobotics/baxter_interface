@@ -34,9 +34,7 @@ from copy import deepcopy
 import math
 import operator
 import numpy as np
-import matplotlib as mpl
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
+
 import bezier
 
 import rospy
@@ -354,21 +352,6 @@ class JointTrajectoryActionServer(object):
         b_matrix = self._compute_bezier_coeff(joint_names,
                                               trajectory_points,
                                               dimensions_dict)
-        """
-        fig = plt.figure()
-        print [pnt.positions for pnt in trajectory_points]
-        import numpy as np
-        traj_array = np.array([pnt.positions for pnt in trajectory_points])
-        d_pts = bezier.compute_de_boor_control_pts(traj_array)
-        bvals = bezier.compute_bvals(traj_array, d_pts)
-        b_curve = bezier.compute_curve(bvals, 50)
-        plt.plot(b_curve[:,0])
-        print traj_array
-        plt_traj = np.array([[n*50, traj_array[n,0]] for n in range(len(traj_array[:,0]))])
-        print plt_traj
-        plt.plot(plt_traj[:,0], plt_traj[:,1], 'g*')
-        plt.show()
-        """
 
         # Wait for the specified execution time, if not provided use now
         start_time = goal.trajectory.header.stamp.to_sec()
@@ -381,7 +364,6 @@ class JointTrajectoryActionServer(object):
         # Loop until end of trajectory time.  Provide a single time step
         # of the control rate past the end to ensure we get to the end.
         # Keep track of current indices for spline segment generation
-        plt_pnts = list()
         point = start_point 
         now_from_start = rospy.get_time() - start_time
         end_time = trajectory_points[-1].time_from_start.to_sec()
@@ -411,83 +393,12 @@ class JointTrajectoryActionServer(object):
             # Command Joint Position, Velocity, Acceleration
             command_success = self._command_joints(joint_names, point)
             point.time_from_start = now_from_start
-            #plt_pnts.append(point)
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
             # Release the Mutex
             self._mutex.release()
             if not command_success:
                 return
             control_rate.sleep()
-        """
-        if self._name == 'left':
-            joint_no = 1
-            print 'Number points = ' + str(len(plt_pnts))
-            traj_array = np.zeros((len(trajectory_points),3))
-            for idx, point in enumerate(trajectory_points):
-                plt.subplot(3, 1, 1)
-                x_out = point.time_from_start.to_sec()
-                y_pos_out = point.positions[joint_no]
-                print "timestamps: {0}".format(x_out)
-                print "pos: {0}".format(y_pos_out)
-                plt.plot(x_out, y_pos_out, 'ro')
-                plt.title('Position Commanded right_s0 In')
- 
-                plt.subplot(3, 1, 2)
-                x_out = point.time_from_start.to_sec()
-                y_vel_out = point.velocities[joint_no]
-                print "timestamps: {0}".format(x_out)
-                print "vel: {0}".format(y_vel_out)
-                plt.plot(x_out, y_vel_out, 'go')
-                plt.title('Velocity Commanded left_s0 In')
- 
-                plt.subplot(3, 1, 3)
-                x_out = point.time_from_start.to_sec()
-                y_accel_out = point.accelerations[joint_no]
-                print "timestamps: {0}".format(x_out)
-                print "accel: {0}".format(y_accel_out)
-                plt.plot(x_out, y_accel_out, 'bo')
-                plt.title('Acceleration Commanded left_s0 In')
-                traj_array[idx, range(0,3)] = [y_pos_out, y_vel_out, y_accel_out] 
-            pnt_array = np.zeros((len(plt_pnts),3))
-            for idx, point in enumerate(plt_pnts):
-                plt.subplot(3, 1, 1)
-                x_out = point.time_from_start
-                y_pos_out = point.positions[joint_no]
-                plt.plot(x_out, y_pos_out, 'bo')
-                plt.title('Position Commanded right_s0 Out')
-                plt.subplot(3, 1, 2)
-                x_out = point.time_from_start
-                y_vel_out = point.velocities[joint_no]
-                plt.plot(x_out, y_vel_out, 'ro')
-                plt.title('Velocity Commanded left_s0 Out')
- 
-                plt.subplot(3, 1, 3)
-                x_out = point.time_from_start
-                y_accel_out = point.accelerations[joint_no]
-                plt.plot(x_out, y_accel_out, 'go')
-                plt.title('Acceleration Commanded left_s0 Out')
-                pnt_array[idx, range(0,3)] = [y_pos_out, y_vel_out, y_accel_out] 
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            ax.plot(pnt_array[:,0], pnt_array[:,1], pnt_array[:,2])
-            ax.plot(traj_array[:,0], traj_array[:,1], traj_array[:,2], 'g*')
-            ax.set_xlabel("Position")
-            ax.set_ylabel("Velocity")
-            ax.set_zlabel("Acceleration")
-            ax.set_title("PR2 Quintic")
-            fig = plt.figure()
-            d_pts = bezier.compute_de_boor_control_pts(traj_array)
-            bvals = bezier.compute_bvals(traj_array, d_pts)
-            b_curve = bezier.compute_curve(bvals, 50)
-            ab = fig.gca(projection='3d')
-            ab.plot(b_curve[:,0], b_curve[:,1], b_curve[:,2])
-            ab.plot(traj_array[:,0], traj_array[:,1], traj_array[:,2], 'g*')
-            ab.set_xlabel("Position")
-            ab.set_ylabel("Velocity")
-            ab.set_zlabel("Acceleration")
-            ax.set_title("Bezier Cubic")
-            plt.show()
-        """
         # Keep trying to meet goal until goal_time constraint expired
         last = trajectory_points[-1]
         last_time = trajectory_points[-1].time_from_start.to_sec()
