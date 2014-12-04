@@ -209,10 +209,8 @@ def compute_point(bvals, b_index, t):
     """
     if b_index < 0:
         b_point = bvals[:, 0, 0]
-        print "B Point Start: {0}".format(b_point) # FIXME remove
     elif b_index > bvals.shape[1]:
         b_point = bvals[:, -1, -1]
-        print "B Point End: {0}".format(b_point) #FIXME remove
     else:
         t = 0.0 if t < 0.0 else t
         t = 1.0 if t > 1.0 else t
