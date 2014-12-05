@@ -42,8 +42,6 @@ from control_msgs.msg import (
 
 import baxter_interface
 
-from baxter_interface import CHECK_VERSION
-
 class HeadActionServer(object):
     def __init__(self, reconfig_server):
         self._dyn = reconfig_server
@@ -64,13 +62,12 @@ class HeadActionServer(object):
         self._result = SingleJointPositionResult()
 
         # Initialize Parameters
-        self._prm = self._head.parameters()
+        self._prm = {"dead_zone" : baxter_interface.settings.HEAD_PAN_ANGLE_TOLERANCE}
         self._timeout = 5.0
 
     def _get_head_parameters(self):
         self._timeout = self._dyn.config['timeout']
         self._prm['dead_zone'] = self._dyn.config['goal']
-        self._head.set_parameters(parameters=self._prm)
 
     def _update_feedback(self):
         self._fdbk.position = self._head.pan()
@@ -82,7 +79,7 @@ class HeadActionServer(object):
 
     def _check_state(self, position):
         return (fabs(self._head.pan() - position) <
-                self._head.parameters()['dead_zone'])
+                self._prm['dead_zone'])
 
     def _on_head_action(self, goal):
         position = goal.position
