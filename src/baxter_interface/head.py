@@ -25,6 +25,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from copy import deepcopy
+from math import fabs
+
 import rospy
 
 from std_msgs.msg import (
