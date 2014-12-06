@@ -272,7 +272,7 @@ class JointTrajectoryActionServer(object):
         pnt.velocities = [0.0] * len(joint_names)
         pnt.accelerations = [0.0] * len(joint_names)
         for jnt in xrange(len(joint_names)):
-            b_point = bezier.compute_point(b_matrix[jnt, :, :, :], idx, t)
+            b_point = bezier.bezier_point(b_matrix[jnt, :, :, :], idx, t)
             # Positions at specified time
             pnt.positions[jnt] = b_point[0]
             # Velocities at specified time
@@ -300,8 +300,8 @@ class JointTrajectoryActionServer(object):
                 if dimensions_dict['accelerations']:
                     current_point.append(point.accelerations[jnt])
                 traj_array[idx, :] = current_point
-            d_pts = bezier.compute_de_boor_control_pts(traj_array)
-            b_matrix[jnt, :, :, :] = bezier.compute_bvals(traj_array, d_pts)
+            d_pts = bezier.de_boor_control_pts(traj_array)
+            b_matrix[jnt, :, :, :] = bezier.bezier_coefficients(traj_array, d_pts)
         return b_matrix
 
     def _determine_dimensions(self, trajectory_points):
