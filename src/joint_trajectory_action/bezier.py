@@ -36,11 +36,12 @@
 #
 
 """
-This Bezier library was  implemented as a class project in CIS515,
-Fundamentals of Linear Algebra, taught by Professor Jean Gallier 
-in the summer of 2011 at the University of Pennsylvania. For an excellent
-explanation of Cubic Bezier Curves, and the math represented in this
-library, see http://www.cis.upenn.edu/~cis515/proj1-12.pdf
+The Bezier library was  implemented as a class project in CIS515,
+Fundamentals of Linear Algebra, taught by Professor Jean Gallier
+in the summer of 2011 at the University of Pennsylvania. For an
+excellent explanation of Cubic Bezier Curves, and the math
+represented in this library, see
+http://www.cis.upenn.edu/~cis515/proj1-12.pdf
 
 ~~~~~~~~~~~~~~~~~~~~~~~~ Bezier ~~~~~~~~~~~~~~~~~~~~~~~~
 A library for computing Bezier Cubic Splines for an arbitrary
@@ -61,9 +62,9 @@ import bezier
 points_array = numpy.array([[1, 2, 3], [4, 4, 4],
                             [6, 4, 6], [2, 5, 6],
                             [5, 6, 7]])
-d_pts = bezier.compute_de_boor_control_pts(points_array)
-bvals = bezier.compute_bvals(points_array, d_pts)
-b_curve = bezier.compute_curve(bvals, 50)
+d_pts = bezier.de_boor_control_pts(points_array)
+b_coeffs = bezier.bezier_coefficients(points_array, d_pts)
+b_curve = bezier.bezier_curve(b_coeffs, 50)
 #  plotting example
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -83,14 +84,14 @@ plt.show()
 import numpy as np
 
 
-def compute_de_boor_control_pts(points_array, d0=None,
-                                dN=None, natural=True):
+def de_boor_control_pts(points_array, d0=None,
+                        dN=None, natural=True):
     """
     Compute the de Boor control points for a given
     set for control points
 
     params:
-        points_array: array of control points
+        points_array: array of user-supplied control points
             numpy.array of size N by k
             N is the number of input control points
             k is the number of dimensions for each point
@@ -164,19 +165,21 @@ def compute_de_boor_control_pts(points_array, d0=None,
     return d_pts
 
 
-def compute_bvals(points_array, d_pts):
+def bezier_coefficients(points_array, d_pts):
     """
-    Compute the Bezier control points for a given
-    set for control pts and de Boor control pts.
+    Compute the Bezier coefficients for a given
+    set for user-supplied control pts and
+    de Boor control pts.
 
-    These B values are used to compute the cubic
-    splines as follows:
-    For each cubic spline segment:
+    These B coeffs are used to compute the cubic
+    splines for each cubic spline segment as
+    follows (where t is a percentage of time between
+    b_coeff segments):
     C(t) = (1 - t)^3*b0 + 3(1 - t)*b1
             + 3(1 - t)*t^2*b2 + t^3*b3
 
     params:
-        points_array: array of control points
+        points_array: array of user-supplied control points
             numpy.array of size N by k
             N is the number of control points
             k is the number of dimensions for each point
@@ -185,60 +188,94 @@ def compute_bvals(points_array, d_pts):
             numpy.array of size N+3 by k
 
     returns:
-        bvals: 3D array of 4 Bezier control points
-            for every control point, for every dimension
-            of the control points
+        b_coeffs: k-dimensional array of 4 Bezier coefficients
+            for every control point
             numpy.array of size N by 4 by k
     """
     (rows, k) = np.shape(points_array)
     N = rows - 1  # N minus 1 because points array includes x_0
-    bvals = np.zeros(shape=(k, N, 4))
+    b_coeffs = np.zeros(shape=(k, N, 4))
     for i in range(0, N):
         points_array_i = i+1
         d_pts_i = i + 2
         if i == 0:
             for axis_pos in range(0, k):
-                bvals[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                     axis_pos]
-                bvals[axis_pos, i, 1] = d_pts[d_pts_i - 1, axis_pos]
-                bvals[axis_pos, i, 2] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
-                                         + 0.5 * d_pts[d_pts_i, axis_pos])
-                bvals[axis_pos, i, 3] = points_array[points_array_i, axis_pos]
+                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
+                                                        axis_pos]
+                b_coeffs[axis_pos, i, 1] = d_pts[d_pts_i - 1, axis_pos]
+                b_coeffs[axis_pos, i, 2] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
+                                            + 0.5 * d_pts[d_pts_i, axis_pos])
+                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
+                                                        axis_pos]
         elif i == N-1:
             for axis_pos in range(0, k):
-                bvals[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                     axis_pos]
-                bvals[axis_pos, i, 1] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
-                                         + 0.5 * d_pts[d_pts_i, axis_pos])
-                bvals[axis_pos, i, 2] = d_pts[d_pts_i, axis_pos]
-                bvals[axis_pos, i, 3] = points_array[points_array_i, axis_pos]
+                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
+                                                        axis_pos]
+                b_coeffs[axis_pos, i, 1] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
+                                            + 0.5 * d_pts[d_pts_i, axis_pos])
+                b_coeffs[axis_pos, i, 2] = d_pts[d_pts_i, axis_pos]
+                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
+                                                        axis_pos]
         else:
             for axis_pos in range(0, k):
-                bvals[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                     axis_pos]
-                bvals[axis_pos, i, 1] = (2.0/3.0 * d_pts[d_pts_i - 1, axis_pos]
-                                         + 1.0/3.0 * d_pts[d_pts_i, axis_pos])
-                bvals[axis_pos, i, 2] = (1.0/3.0 * d_pts[d_pts_i - 1, axis_pos]
-                                         + 2.0/3.0 * d_pts[d_pts_i, axis_pos])
-                bvals[axis_pos, i, 3] = points_array[points_array_i, axis_pos]
+                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
+                                                        axis_pos]
+                b_coeffs[axis_pos, i, 1] = (2.0/3.0 * d_pts[d_pts_i - 1,
+                                                            axis_pos]
+                                            + 1.0/3.0 * d_pts[d_pts_i,
+                                                              axis_pos])
+                b_coeffs[axis_pos, i, 2] = (1.0/3.0 * d_pts[d_pts_i - 1,
+                                                            axis_pos]
+                                            + 2.0/3.0 * d_pts[d_pts_i,
+                                                              axis_pos])
+                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
+                                                        axis_pos]
 
-    return bvals
+    return b_coeffs
 
 
-def compute_point(bvals, b_index, t):
+def _cubic_spline_point(b_coeff, t):
+    """
+    Internal convenience function for calculating
+    a k-dimensional point defined by the supplied
+    Bezier coefficients. Finds the point that
+    describes the current position along the bezier
+    segment for k dimensions.
+
+    params:
+        b_coeff => b0...b3: Four k-dimensional Bezier
+            coefficients each one is a numpy.array
+            of size k by 1, so
+            b_coeff is a numpy array of size k by 4
+            k is the number of dimensions for each
+            coefficient
+        t: percentage of time elapsed for this segment
+            0 <= int <= 1.0
+
+    returns:
+        current position in k dimensions
+            numpy.array of size 1 by k
+    """
+    return (pow((1-t), 3)*b_coeff[:, 0] +
+            3*pow((1-t), 2)*t*b_coeff[:, 1] +
+            3*(1-t)*pow(t, 2)*b_coeff[:, 2] +
+            pow(t, 3)*b_coeff[:, 3]
+            )
+
+
+def bezier_point(b_coeffs, b_index, t):
     """
     Finds the k values that describe the current
     position along the bezier curve for k dimensions.
 
     params:
-        bvals: 3D array of 4 Bezier control points
-            for every control point, for every dimension
-            of the control points
-            numpy.array of size N by 4 by k
+        b_coeffs: k-dimensional array
+            for every control point with 4 Bezier coefficients
+            numpy.array of size k by N by 4
             N is the number of control points
             k is the number of dimensions for each point
         b_index: index position out between two of
-            the N control points for this point in time
+            the N b_coeffs for this point in time
             int
         t: percentage of time that has passed between
             the two control points
@@ -248,35 +285,27 @@ def compute_point(bvals, b_index, t):
         b_point: current position in k dimensions
             numpy.array of size 1 by k
     """
-    if b_index < 0:
-        b_point = bvals[:, 0, 0]
-    elif b_index > bvals.shape[1]:
-        b_point = bvals[:, -1, -1]
+    if b_index <= 0:
+        b_point = b_coeffs[:, 0, 0]
+    elif b_index > b_coeffs.shape[1]:
+        b_point = b_coeffs[:, -1, -1]
     else:
         t = 0.0 if t < 0.0 else t
         t = 1.0 if t > 1.0 else t
-        num_axes = bvals.shape[0]
-        b_point = np.zeros(num_axes)
-        for current_axis in range(0, num_axes):
-            (b0, b1, b2, b3) = bvals[current_axis, b_index-1, range(4)]
-            b_point[current_axis] = (pow((1-t), 3)*b0 +
-                                     3*pow((1-t), 2)*t*b1 +
-                                     3*(1-t)*pow(t, 2)*b2 +
-                                     pow(t, 3)*b3
-                                     )
+        b_coeff_set = b_coeffs[:, b_index-1, range(4)]
+        b_point = _cubic_spline_point(b_coeff_set, t)
     return b_point
 
 
-def compute_curve(bvals, num_intervals):
+def bezier_curve(b_coeffs, num_intervals):
     """
     Iterpolation of the entire Bezier curve at once,
     using a specified number of intervals between
-    control points.
+    control points (encapsulated by b_coeffs).
 
     params:
-        bvals: 3D array of 4 Bezier control points
-            for every control point, for every dimension
-            of the control points
+        b_coeffs: k-dimensional array of 4 Bezier coefficients
+            for every control point
             numpy.array of size N by 4 by k
             N is the number of control points
             k is the number of dimensions for each point
@@ -285,25 +314,22 @@ def compute_curve(bvals, num_intervals):
             int > 0
 
     returns:
-        b_curve: positions along the bezier curve in k dimensions
+        b_curve: positions along the bezier curve in k-dimensions
             numpy.array of size N*num_interval+1  by k
             (the +1 is to include the start position on the curve)
     """
     assert num_intervals > 0,\
         "Invalid number of intervals chosen (must be greater than 0)"
     interval = 1.0 / num_intervals
-    (num_axes, num_bpts, _) = np.shape(bvals)
+    (num_axes, num_bpts, _) = np.shape(b_coeffs)
     b_curve = np.zeros((num_bpts*num_intervals+1, num_axes))
     # Copy out initial point
-    b_curve[0, :] = bvals[:, 0, 0]
-    for current_bpt in range(0, num_bpts):
-        for current_axis in range(0, num_axes):
-            (b0, b1, b2, b3) = bvals[current_axis, current_bpt, range(0, 4)]
+    b_curve[0, :] = b_coeffs[:, 0, 0]
+    for current_bpt in range(num_bpts):
+            b_coeff_set = b_coeffs[:, current_bpt, range(4)]
             for iteration, t in enumerate(np.linspace(interval, 1,
                                                       num_intervals)):
-                b_curve[(current_bpt*num_intervals+iteration+1),
-                        current_axis] = (
-                    pow((1-t), 3)*b0 + 3*pow((1-t), 2)*t*b1
-                    + 3*(1-t)*pow(t, 2)*b2 + pow(t, 3)*b3
-                )
+                b_curve[(current_bpt *
+                         num_intervals +
+                         iteration+1), :] = _cubic_spline_point(b_coeff_set, t)
     return b_curve
