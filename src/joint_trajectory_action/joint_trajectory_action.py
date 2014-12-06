@@ -71,7 +71,6 @@ class JointTrajectoryActionServer(object):
             execute_cb=self._on_trajectory_action,
             auto_start=False)
         self._action_name = rospy.get_name()
-        self._server.start()
         self._limb = baxter_interface.Limb(limb)
         self._name = limb
         self._cuff = baxter_interface.DigitalIO('%s_lower_cuff' % (limb,))
@@ -222,6 +221,7 @@ class JointTrajectoryActionServer(object):
             if self._mode == 'position_w_id':
                 pnt = JointTrajectoryPoint()
                 pnt.time_from_start = rospy.Time.now()
+                pnt.positions = self._get_current_position(joint_names)
                 pnt.positions = [0.0] * len(joint_names)
                 pnt.velocities = [0.0] * len(joint_names)
                 pnt.accelerations = [0.0] * len(joint_names)
@@ -255,7 +255,7 @@ class JointTrajectoryActionServer(object):
             if self._mode == 'velocity':
                 velocities.append(self._pid[delta[0]].compute_output(delta[1]))
         if ((self._mode == 'position' or self._mode == 'position_w_id')
-            and self._alive):
+              and self._alive):
             cmd = dict(zip(joint_names, point.positions))
             self._limb.set_joint_positions(cmd, raw=True)
             if self._mode == 'position_w_id':
@@ -328,7 +328,7 @@ class JointTrajectoryActionServer(object):
             return
         rospy.loginfo("%s: Executing requested joint trajectory" %
                       (self._action_name,))
-        rospy.loginfo("Trajectory Points: {0}".format(trajectory_points))
+        rospy.logdebug("Trajectory Points: {0}".format(trajectory_points))
         control_rate = rospy.Rate(self._control_rate)
 	#Force Accelerations to zero at the final timestep if commanded
 	#Perhaps change this if you wish to spline trajectories together
@@ -372,8 +372,6 @@ class JointTrajectoryActionServer(object):
             self._mutex.acquire()
             now = rospy.get_time()
             now_from_start = now - start_time
-            print "Now from start: {0}".format(now_from_start)
-            print "Point times: {0}".format(pnt_times)
             idx = bisect.bisect(pnt_times, now_from_start)
             #Calculate percentage of time passed in this interval
             if idx >= num_points:
@@ -391,12 +389,12 @@ class JointTrajectoryActionServer(object):
 				           dimensions_dict)
 
             # Command Joint Position, Velocity, Acceleration
-            command_success = self._command_joints(joint_names, point)
+            command_executed = self._command_joints(joint_names, point)
             point.time_from_start = now_from_start
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
             # Release the Mutex
             self._mutex.release()
-            if not command_success:
+            if not command_executed:
                 return
             control_rate.sleep()
         # Keep trying to meet goal until goal_time constraint expired
