@@ -1,9 +1,50 @@
 #! /usr/bin/python
+# Software License Agreement (BSD License)
+#
+# Copyright (c) 2013-2014, Rethink Robotics
+# All rights reserved.
+#
+# Copyright (c) 2011, Ian McMahon
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of Ian McMahon nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 """
-A library for computing Bezier Cubic
-for an arbitrary set of control points
-in R2 or R3 space
+This Bezier library was  implemented as a class project in CIS515,
+Fundamentals of Linear Algebra, taught by Professor Jean Gallier 
+in the summer of 2011 at the University of Pennsylvania. For an excellent
+explanation of Cubic Bezier Curves, and the math represented in this
+library, see http://www.cis.upenn.edu/~cis515/proj1-12.pdf
+
+~~~~~~~~~~~~~~~~~~~~~~~~ Bezier ~~~~~~~~~~~~~~~~~~~~~~~~
+A library for computing Bezier Cubic Splines for an arbitrary
+set of control points in R2, R3, up to RN space.
 
 Cubic Segment:
 C(t) = (1 - t)^3*b0 + 3(1 - t)*b1 + 3(1 - t)*t^2*b2 + t^3*b3
