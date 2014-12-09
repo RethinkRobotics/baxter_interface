@@ -41,6 +41,7 @@ from dynamic_reconfigure.server import Server
 from baxter_interface.cfg import (
     PositionJointTrajectoryActionServerConfig,
     VelocityJointTrajectoryActionServerConfig,
+    PositionFFJointTrajectoryActionServerConfig,
 )
 from joint_trajectory_action.joint_trajectory_action import (
     JointTrajectoryActionServer,
@@ -60,8 +61,11 @@ def start_server(limb, rate, mode):
     if mode == 'velocity':
         dyn_cfg_srv = Server(VelocityJointTrajectoryActionServerConfig,
                              lambda config, level: config)
-    else:
+    elif mode == 'position':
         dyn_cfg_srv = Server(PositionJointTrajectoryActionServerConfig,
+                             lambda config, level: config)
+    else:
+        dyn_cfg_srv = Server(PositionFFJointTrajectoryActionServerConfig,
                              lambda config, level: config)
     jtas = []
     if limb == 'both':
