@@ -23,6 +23,8 @@ generate_dynamic_reconfigure_options(
   cfg/HeadActionServer.cfg
 )
 
+add_dependencies(${PROJECT_NAME}_gencfg baxter_core_msgs_generate_messages_py)
+
 catkin_package(
   CATKIN_DEPENDS
   rospy
