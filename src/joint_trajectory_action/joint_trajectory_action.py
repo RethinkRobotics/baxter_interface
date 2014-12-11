@@ -208,7 +208,7 @@ class JointTrajectoryActionServer(object):
         self._server.publish_feedback(self._fdbk)
 
     def _reorder_joints_ff_cmd(self, joint_names, point):
-	joint_name_order = self._limb._joint_names[self._limb.name]
+	joint_name_order = self._limb.joint_names()
 	pnt = JointTrajectoryPoint()
 	pnt.time_from_start = point.time_from_start
 	pos_cmd = dict(zip(joint_names, point.positions))
@@ -351,16 +351,14 @@ class JointTrajectoryActionServer(object):
         control_rate = rospy.Rate(self._control_rate)
 
         dimensions_dict = self._determine_dimensions(trajectory_points)
-	# Force Velocites/Accelerations to zero at the first/final timestep 
+	# Force Velocites/Accelerations to zero at the final timestep 
         # if they exist in the trajectory
 	# Remove this behavior if you are stringing together trajectories,
         # and want continuous, non-zero velocities/accelerations between
         # trajectories
         if dimensions_dict['velocities']:
-            trajectory_points[0].velocities = [0.0] * len(joint_names)
             trajectory_points[-1].velocities = [0.0] * len(joint_names)
         if dimensions_dict['accelerations']:
-            trajectory_points[0].accelerations = [0.0] * len(joint_names)
             trajectory_points[-1].accelerations = [0.0] * len(joint_names)
 
         # Compute Full Bezier Curve Coefficients for all 7 joints
