@@ -36,6 +36,7 @@ nosetests.xml
 cmake_install.cmake
 .pydevproject
 *.swp
+*.swo
 CATKIN_IGNORE
 catkin
 catkin_generated

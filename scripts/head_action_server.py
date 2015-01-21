@@ -27,56 +27,37 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from dynamic_reconfigure.parameter_generator_catkin import (
-    ParameterGenerator,
-    double_t,
+"""
+Baxter RSDK Head Action Server
+"""
+import argparse
+
+import rospy
+
+from dynamic_reconfigure.server import Server
+
+from baxter_interface.cfg import (
+    HeadActionServerConfig
+)
+from head_action.head_action import (
+    HeadActionServer,
 )
 
-gen = ParameterGenerator()
 
-gen.add(
-    'goal_time', double_t, 0,
-    "Amount of time (s) controller is permitted to be late achieving goal",
-    0.0, 0.0, 120.0,
-)
+def start_server():
+    print("Initializing node... ")
+    rospy.init_node("rsdk_head_action_server")
+    print("Initializing head action server...")
 
-gen.add(
-    'stopped_velocity_tolerance', double_t, 0,
-    "Maximum velocity (m/s) at end of trajectory to be considered stopped",
-    -1.0, -1.0, 1.0,
-)
+    dynamic_cfg_srv = Server(HeadActionServerConfig,
+                             lambda config, level: config)
 
-joints = (
-    'left_s0', 'left_s1', 'left_e0', 'left_e1', 'left_w0', 'left_w1',
-    'left_w2', 'right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0',
-    'right_w1', 'right_w2',
-    )
+    HeadActionServer(dynamic_cfg_srv)
+    print("Running. Ctrl-c to quit")
+    rospy.spin()
 
-params = ('_goal', '_trajectory', '_kp', '_ki', '_kd',)
-msg = (
-    " - maximum final error",
-    " - maximum error during trajectory execution",
-    " - Kp proportional control gain",
-    " - Ki integral control gain",
-    " - Kd derivative control gain",
-    )
-min = (-1.0, -1.0, 0.0, 0.0, 0.0,)
-default = (-1.0, -1.0, 2.0, 0.0, 0.0,)
-max = (3.0, 3.0, 500.0, 100.0, 100.0,)
+def main():
+    start_server()
 
-for idx, param in enumerate(params):
-    if idx < 2:
-        for joint in joints:
-            gen.add(
-                joint + param, double_t, 0, joint + msg[idx],
-                default[idx], min[idx], max[idx]
-            )
-for joint in joints:
-    for idx, param in enumerate(params):
-        if idx >= 2:
-            gen.add(
-                joint + param, double_t, 0, joint + msg[idx],
-                default[idx], min[idx], max[idx]
-            )
-
-exit(gen.generate('baxter_interface', '', 'VelocityJointTrajectoryActionServer'))
+if __name__ == "__main__":
+    main()

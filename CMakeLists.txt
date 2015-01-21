@@ -19,8 +19,12 @@ catkin_python_setup()
 generate_dynamic_reconfigure_options(
   cfg/PositionJointTrajectoryActionServer.cfg
   cfg/VelocityJointTrajectoryActionServer.cfg
+  cfg/PositionFFJointTrajectoryActionServer.cfg
   cfg/GripperActionServer.cfg
+  cfg/HeadActionServer.cfg
 )
+
+add_dependencies(${PROJECT_NAME}_gencfg baxter_core_msgs_generate_messages_py)
 
 catkin_package(
   CATKIN_DEPENDS

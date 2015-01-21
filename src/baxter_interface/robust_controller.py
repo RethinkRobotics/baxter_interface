@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,8 @@ class RobustController(object):
         """
         self._command_pub = rospy.Publisher(
             namespace + '/enable',
-            type(enable_msg))
+            type(enable_msg),
+            queue_size=10)
         self._status_sub = rospy.Subscriber(
             namespace + '/status',
             RobustControllerStatus,

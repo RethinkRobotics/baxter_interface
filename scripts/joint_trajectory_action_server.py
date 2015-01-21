@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,14 @@ from dynamic_reconfigure.server import Server
 from baxter_interface.cfg import (
     PositionJointTrajectoryActionServerConfig,
     VelocityJointTrajectoryActionServerConfig,
+    PositionFFJointTrajectoryActionServerConfig,
 )
 from joint_trajectory_action.joint_trajectory_action import (
     JointTrajectoryActionServer,
+)
+
+from trajectory_msgs.msg import (
+    JointTrajectoryPoint,
 )
 
 
@@ -56,8 +61,11 @@ def start_server(limb, rate, mode):
     if mode == 'velocity':
         dyn_cfg_srv = Server(VelocityJointTrajectoryActionServerConfig,
                              lambda config, level: config)
-    else:
+    elif mode == 'position':
         dyn_cfg_srv = Server(PositionJointTrajectoryActionServerConfig,
+                             lambda config, level: config)
+    else:
+        dyn_cfg_srv = Server(PositionFFJointTrajectoryActionServerConfig,
                              lambda config, level: config)
     jtas = []
     if limb == 'both':
@@ -90,7 +98,8 @@ def main():
         type=float, help="trajectory control rate (Hz)"
     )
     parser.add_argument(
-        "-m", "--mode", default='position', choices=['position', 'velocity'],
+        "-m", "--mode", default='position_w_id',
+        choices=['position_w_id', 'position', 'velocity'],
         help="control mode for trajectory execution"
     )
     args = parser.parse_args(rospy.myargv()[1:])

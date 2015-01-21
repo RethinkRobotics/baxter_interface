@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,7 +80,8 @@ class DigitalIO(object):
         if self._is_output:
             self._pub_output = rospy.Publisher(
                 type_ns + '/command',
-                DigitalOutputCommand)
+                DigitalOutputCommand,
+                queue_size=10)
 
     def _on_io_state(self, msg):
         """

@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -76,7 +76,9 @@ class CameraController(object):
         list_svc = rospy.ServiceProxy('/cameras/list', ListCameras)
         rospy.wait_for_service('/cameras/list', timeout=10)
         if not self._id in list_svc().cameras:
-            raise AttributeError("Invalid camera name '%s'" % (self._id,))
+            raise AttributeError(
+                ("Cannot locate a service for camera name '{0}'. "
+                "Close a different camera first and try again.".format(self._id)))
 
         self._open_svc = rospy.ServiceProxy('/cameras/open', OpenCamera)
         self._close_svc = rospy.ServiceProxy('/cameras/close', CloseCamera)
@@ -88,9 +90,7 @@ class CameraController(object):
         self._open = False
 
     def _reload(self):
-        if self._open:
-            self.close()
-            self.open()
+        self.open()
 
     def _get_value(self, control, default):
         lookup = [c.value for c in self._settings.controls if c.id == control]

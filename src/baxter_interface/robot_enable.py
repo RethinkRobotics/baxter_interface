@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,8 @@ class RobotEnable(object):
 
     def _toggle_enabled(self, status):
 
-        pub = rospy.Publisher('robot/set_super_enable', Bool)
+        pub = rospy.Publisher('robot/set_super_enable', Bool, 
+                              queue_size=10)
 
         baxter_dataflow.wait_for(
             test=lambda: self._state.enabled == status,
@@ -148,7 +149,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
                             self._state.error == False and
                             self._state.estop_button == 0 and
                             self._state.estop_source == 0)
-        pub = rospy.Publisher('robot/set_super_reset', Empty)
+        pub = rospy.Publisher('robot/set_super_reset', Empty, queue_size=10)
 
         if (self._state.stopped and
             self._state.estop_button == AssemblyState.ESTOP_BUTTON_PRESSED):
@@ -175,7 +176,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
         Simulate an e-stop button being pressed.  Robot must be reset to clear
         the stopped state.
         """
-        pub = rospy.Publisher('robot/set_super_stop', Empty)
+        pub = rospy.Publisher('robot/set_super_stop', Empty, queue_size=10)
         baxter_dataflow.wait_for(
             test=lambda: self._state.stopped == True,
             timeout=3.0,
@@ -198,7 +199,6 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
         # get local lock for rosparam threading bug
         with self.__class__.param_lock:
             robot_version = rospy.get_param(param_name, None)
-
         if not robot_version:
             rospy.logwarn("RobotEnable: Failed to retrieve robot version "
                           "from rosparam: %s\n"
@@ -206,9 +206,8 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
                           "(i.e. ROS_MASTER_URI)", param_name)
             return False
         else:
-            # parse out tags
-            pattern = ("([0-9]+)\.([0-9]+)\.([0-9]+)"
-                       "($|_(alpha|beta|pre|rc|p)([0-9]+))")
+            # parse out first 3 digits of robot version tag
+            pattern = ("^([0-9]+)\.([0-9]+)\.([0-9]+)")
             match = re.search(pattern, robot_version)
             if not match:
                 rospy.logwarn("RobotEnable: Invalid robot version: %s",
