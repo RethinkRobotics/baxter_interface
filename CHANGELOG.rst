@@ -1,3 +1,13 @@
+1.1.0 (2015-1-2)
+---------------------------------
+- Updates baxter_interface to ROS Indigo
+- Upgrades to the Indigo robot required a reworking of how cameras power **on** / **off** - Three cameras can no longer be powered at the same time, and closing cameras turns power **off** to the specified camera and **on** to the other two
+- Updates joint trajectory action server to use new Inverse Dynamics Feed Forward Commands and configurations for smoother & more accurate MoveIt trajectory execution
+- Updates joint trajectory action server default control mode from *position* to *position_w_id* which uses 'raw' joint position control
+- Updates joint trajectory action server to replace linear, cubic, and quintic spline fitting with *Cubic Bezier Spline* interpolation. These splines can use Position, Velocity, and/or Acceleration to more accurately interpolate supplied trajectories
+- Adds head trajectory action server interface for controlling Baxter's head pan joint (thanks to @aginika for contributing this)
+- Updates verification of Gripper software versions to check firmware Build Date instead of Build Version (SDK gripper version 1.1 conflicted with Manufacturing versions)
+
 1.0.0 (2014-5-1)
 ---------------------------------
 - Adds new 'raw' joint position control mode

@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014, Rethink Robotics
+# Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,6 @@
 Baxter RSDK Joint Trajectory Action Server
 """
 import bisect
-import threading
 from copy import deepcopy
 import math
 import operator
@@ -61,7 +60,6 @@ import baxter_interface
 class JointTrajectoryActionServer(object):
     def __init__(self, limb, reconfig_server, rate=100.0,
                  mode='position_w_id'):
-        self._mutex = threading.Lock()
         self._dyn = reconfig_server
         self._ns = 'robot/limb/' + limb
         self._fjt_ns = self._ns + '/follow_joint_trajectory'
@@ -139,7 +137,6 @@ class JointTrajectoryActionServer(object):
             self._goal_time = goal.goal_time_tolerance.to_sec()
         else:
             self._goal_time = self._dyn.config['goal_time']
-
         # Stopped velocity tolerance - max velocity at end of execution
         self._stopped_velocity = self._dyn.config['stopped_velocity_tolerance']
 
@@ -224,7 +221,7 @@ class JointTrajectoryActionServer(object):
 	        pnt.accelerations.append(accel_cmd[jnt_name])
         return pnt
 
-    def _command_stop(self, joint_names, joint_angles):
+    def _command_stop(self, joint_names, joint_angles, start_time, dimensions_dict):
         if self._mode == 'velocity':
             velocities = [0.0] * len(joint_names)
             cmd = dict(zip(joint_names, velocities))
@@ -235,16 +232,19 @@ class JointTrajectoryActionServer(object):
                     break
                 rospy.sleep(1.0 / self._control_rate)
         elif self._mode == 'position' or self._mode == 'position_w_id':
-            if self._mode == 'position_w_id':
+            raw_pos_mode = (self._mode == 'position_w_id')
+            if raw_pos_mode:
                 pnt = JointTrajectoryPoint()
-                pnt.time_from_start = rospy.Time.now()
                 pnt.positions = self._get_current_position(joint_names)
-                pnt.velocities = [0.0] * len(joint_names)
-                pnt.accelerations = [0.0] * len(joint_names)
+                if dimensions_dict['velocities']:
+                    pnt.velocities = [0.0] * len(joint_names)
+                if dimensions_dict['accelerations']:
+                    pnt.accelerations = [0.0] * len(joint_names)
             while (not self._server.is_new_goal_available() and self._alive):
-                self._limb.set_joint_positions(joint_angles, raw=True)
+                self._limb.set_joint_positions(joint_angles, raw=raw_pos_mode)
                 # zero inverse dynamics feedforward command
                 if self._mode == 'position_w_id':
+                    pnt.time_from_start = rospy.Duration(rospy.get_time() - start_time)
                     ff_pnt = self._reorder_joints_ff_cmd(joint_names, pnt)
                     self._pub_ff_cmd.publish(ff_pnt)
                 if self._cuff_state:
@@ -252,11 +252,11 @@ class JointTrajectoryActionServer(object):
                     break
                 rospy.sleep(1.0 / self._control_rate)
 
-    def _command_joints(self, joint_names, point):
+    def _command_joints(self, joint_names, point, start_time, dimensions_dict):
         if self._server.is_preempt_requested():
             rospy.loginfo("%s: Trajectory Preempted" % (self._action_name,))
             self._server.set_preempted()
-            self._command_stop(joint_names, self._limb.joint_angles())
+            self._command_stop(joint_names, self._limb.joint_angles(), start_time, dimensions_dict)
             return False
         velocities = []
         deltas = self._get_current_error(joint_names, point.positions)
@@ -267,15 +267,16 @@ class JointTrajectoryActionServer(object):
                              (self._action_name, delta[0], str(delta[1]),))
                 self._result.error_code = self._result.PATH_TOLERANCE_VIOLATED
                 self._server.set_aborted(self._result)
-                self._command_stop(joint_names, self._limb.joint_angles())
+                self._command_stop(joint_names, self._limb.joint_angles(), start_time, dimensions_dict)
                 return False
             if self._mode == 'velocity':
                 velocities.append(self._pid[delta[0]].compute_output(delta[1]))
         if ((self._mode == 'position' or self._mode == 'position_w_id')
               and self._alive):
             cmd = dict(zip(joint_names, point.positions))
-            self._limb.set_joint_positions(cmd, raw=True)
-            if self._mode == 'position_w_id':
+            raw_pos_mode = (self._mode == 'position_w_id')
+            self._limb.set_joint_positions(cmd, raw=raw_pos_mode)
+            if raw_pos_mode:
                 ff_pnt = self._reorder_joints_ff_cmd(joint_names, point)
                 self._pub_ff_cmd.publish(ff_pnt)
         elif self._alive:
@@ -288,8 +289,10 @@ class JointTrajectoryActionServer(object):
         pnt.time_from_start = rospy.Duration(cmd_time)
         num_joints = b_matrix.shape[0]
         pnt.positions = [0.0] * num_joints
-        pnt.velocities = [0.0] * num_joints
-        pnt.accelerations = [0.0] * num_joints
+        if dimensions_dict['velocities']:
+            pnt.velocities = [0.0] * num_joints
+        if dimensions_dict['accelerations']:
+            pnt.accelerations = [0.0] * num_joints
         for jnt in range(num_joints):
             b_point = bezier.bezier_point(b_matrix[jnt, :, :, :], idx, t)
             # Positions at specified time
@@ -299,7 +302,7 @@ class JointTrajectoryActionServer(object):
                 pnt.velocities[jnt] = b_point[1]
             # Accelerations at specified time
             if dimensions_dict['accelerations']:
-                pnt.accelerations[jnt] = b_point[2]
+                pnt.accelerations[jnt] = b_point[-1]
         return pnt
 
     def _compute_bezier_coeff(self, joint_names, trajectory_points, dimensions_dict):
@@ -381,7 +384,6 @@ class JointTrajectoryActionServer(object):
         end_time = trajectory_points[-1].time_from_start.to_sec()
         while (now_from_start < end_time and not rospy.is_shutdown()):
             #Acquire Mutex
-            self._mutex.acquire()
             now = rospy.get_time()
             now_from_start = now - start_time
             idx = bisect.bisect(pnt_times, now_from_start)
@@ -401,10 +403,9 @@ class JointTrajectoryActionServer(object):
 				           dimensions_dict)
 
             # Command Joint Position, Velocity, Acceleration
-            command_executed = self._command_joints(joint_names, point)
+            command_executed = self._command_joints(joint_names, point, start_time, dimensions_dict)
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
             # Release the Mutex
-            self._mutex.release()
             if not command_executed:
                 return
             control_rate.sleep()
@@ -427,7 +428,7 @@ class JointTrajectoryActionServer(object):
 
         while (now_from_start < (last_time + self._goal_time)
                and not rospy.is_shutdown()):
-            if not self._command_joints(joint_names, last):
+            if not self._command_joints(joint_names, last, start_time, dimensions_dict):
                 return
             now_from_start = rospy.get_time() - start_time
             self._update_feedback(deepcopy(last), joint_names,
@@ -455,4 +456,4 @@ class JointTrajectoryActionServer(object):
                          (self._action_name, result, self._name))
             self._result.error_code = self._result.GOAL_TOLERANCE_VIOLATED
             self._server.set_aborted(self._result)
-        self._command_stop(goal.trajectory.joint_names, end_angles)
+        self._command_stop(goal.trajectory.joint_names, end_angles, start_time, dimensions_dict)
