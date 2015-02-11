@@ -348,6 +348,11 @@ class JointTrajectoryActionServer(object):
             rospy.logerr("%s: Empty Trajectory" % (self._action_name,))
             self._server.set_aborted()
             return
+        elif num_points <= 2:
+            rospy.logerr("%s: From SDK 1.1.0, Trajectory need at least 3 trajectories" % (self._action_name,))
+            self._server.set_aborted()
+            return
+
         rospy.loginfo("%s: Executing requested joint trajectory" %
                       (self._action_name,))
         rospy.logdebug("Trajectory Points: {0}".format(trajectory_points))
