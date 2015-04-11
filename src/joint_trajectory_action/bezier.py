@@ -135,19 +135,25 @@ def de_boor_control_pts(points_array, d0=None,
     # Construct de Boor Control Points from A matrix
     d_pts = np.zeros((N+3, k))
     for col in range(0, k):
-        x = np.zeros((N-1, 1))
-        # Compute start / end conditions
-        if natural:
-            x[N-2, 0] = 6*points_array[-2, col] - points_array[-1, col]
-            x[0, 0] = 6*points_array[1, col] - points_array[0, col]
-        else:
-            x[N-2, 0] = 6*points_array[-2, col] - 1.5*dN[0, col]
-            x[0, 0] = 6*points_array[1, col] - 1.5*d0[0, col]
-        x[range(1, N-3+1), 0] = 6*points_array[range(2, N-2+1), col]
-        # Solve bezier interpolation
+        x = np.zeros((max(N-1, 1), 1))
         if N > 2:
+            # Compute start / end conditions
+            if natural:
+                x[N-2, 0] = 6*points_array[-2, col] - points_array[-1, col]
+                x[0, 0] = 6*points_array[1, col] - points_array[0, col]
+            else:
+                x[N-2, 0] = 6*points_array[-2, col] - 1.5*dN[0, col]
+                x[0, 0] = 6*points_array[1, col] - 1.5*d0[0, col]
+            x[range(1, N-3+1), 0] = 6*points_array[range(2, N-2+1), col]
+            # Solve bezier interpolation
             d_pts[2:N+1, col] = np.linalg.solve(A, x).T
         else:
+            # Compute start / end conditions
+            if natural:
+                x[0, 0] = 6*points_array[1, col] - points_array[0, col]
+            else:
+                x[0, 0] = 6*points_array[1, col] - 1.5*d0[col]
+            # Solve bezier interpolation
             d_pts[2, col] = x / A
     # Store off start and end positions
     d_pts[0, :] = points_array[0, :]

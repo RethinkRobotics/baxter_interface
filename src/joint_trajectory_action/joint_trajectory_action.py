@@ -367,18 +367,6 @@ class JointTrajectoryActionServer(object):
             trajectory_points.insert( 0, first_trajectory_point )
             num_points = len(trajectory_points)
 
-        if num_points == 2:
-            # Add midpoint of 2 trajectory points
-            mid_trajectory_point = JointTrajectoryPoint()
-            mid_trajectory_point.positions = [(p1 + p2)/2 for (p1, p2) in zip(trajectory_points[0].positions, trajectory_points[1].positions)]
-            if dimensions_dict['velocities']:
-                mid_trajectory_point.velocities = [(v1 + v2)/2 for (v1, v2) in zip(trajectory_points[0].velocities, trajectory_points[1].velocities)]
-            if dimensions_dict['accelerations']:
-                mid_trajectory_point.accelerations = [(a1 + a2)/2 for (a1, a2) in zip(trajectory_points[0].accelerations, trajectory_points[1].accelerations)]
-            mid_trajectory_point.time_from_start = (trajectory_points[0].time_from_start + trajectory_points[1].time_from_start)/2
-            trajectory_points.insert( 1, mid_trajectory_point )
-            num_points = len(trajectory_points)
-       
 	# Force Velocites/Accelerations to zero at the final timestep 
         # if they exist in the trajectory
 	# Remove this behavior if you are stringing together trajectories,
