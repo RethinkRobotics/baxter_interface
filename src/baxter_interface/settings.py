@@ -32,7 +32,7 @@ HEAD_PAN_ANGLE_TOLERANCE = 0.1396263401
 SDK_VERSION = '1.1.1'
 CHECK_VERSION = True
 # Version Compatibility Maps - {current: compatible}
-VERSIONS_SDK2ROBOT = {'1.1.1': ['1.1.1']}
+VERSIONS_SDK2ROBOT = {'1.1.1': ['1.1.1', '1.1.0']}
 VERSIONS_SDK2GRIPPER = {'1.1.1':
                           {
                            'warn': '2014/5/20 00:00:00',  # Version 1.0.0
