@@ -379,9 +379,19 @@ class JointTrajectoryActionServer(object):
 
         # Compute Full Bezier Curve Coefficients for all 7 joints
         pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
-        b_matrix = self._compute_bezier_coeff(joint_names,
-                                              trajectory_points,
-                                              dimensions_dict)
+        try:
+            b_matrix = self._compute_bezier_coeff(joint_names,
+                                                  trajectory_points,
+                                                  dimensions_dict)
+        except Exception as ex:
+            rospy.logerr(("{0}: Failed to compute a Bezier trajectory for {1}"
+                         " arm with error \"{2}: {3}\"").format(
+                                                  self._action_name,
+                                                  self._name,
+                                                  type(ex).__name__, ex))
+            self._result.error_code = self._result.INVALID_GOAL
+            self._server.set_aborted(self._result)
+            return
         # Wait for the specified execution time, if not provided use now
         start_time = goal.trajectory.header.stamp.to_sec()
         if start_time == 0.0:
