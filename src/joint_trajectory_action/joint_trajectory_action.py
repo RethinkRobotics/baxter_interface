@@ -359,17 +359,19 @@ class JointTrajectoryActionServer(object):
             # Add current position as trajectory point
             first_trajectory_point = JointTrajectoryPoint()
             first_trajectory_point.positions = self._get_current_position(joint_names)
+            # To preserve desired velocities and accelerations, copy them to the first
+            # trajectory point if the trajectory is only 1 point.
             if dimensions_dict['velocities']:
-                first_trajectory_point.velocities = [0.0] * len(joint_names)
+                first_trajectory_point.velocities = deepcopy(trajectory_points[0].velocities)
             if dimensions_dict['accelerations']:
-                first_trajectory_point.accelerations = [0.0] * len(joint_names)
+                first_trajectory_point.accelerations = deepcopy(trajectory_points[0].accelerations)
             first_trajectory_point.time_from_start = rospy.Duration(0)
-            trajectory_points.insert( 0, first_trajectory_point )
+            trajectory_points.insert(0, first_trajectory_point)
             num_points = len(trajectory_points)
 
-	# Force Velocites/Accelerations to zero at the final timestep 
+        # Force Velocites/Accelerations to zero at the final timestep
         # if they exist in the trajectory
-	# Remove this behavior if you are stringing together trajectories,
+        # Remove this behavior if you are stringing together trajectories,
         # and want continuous, non-zero velocities/accelerations between
         # trajectories
         if dimensions_dict['velocities']:
@@ -389,8 +391,7 @@ class JointTrajectoryActionServer(object):
                                                   self._action_name,
                                                   self._name,
                                                   type(ex).__name__, ex))
-            self._result.error_code = self._result.INVALID_GOAL
-            self._server.set_aborted(self._result)
+            self._server.set_aborted()
             return
         # Wait for the specified execution time, if not provided use now
         start_time = goal.trajectory.header.stamp.to_sec()
