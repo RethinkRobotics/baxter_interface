@@ -354,9 +354,24 @@ class JointTrajectoryActionServer(object):
         control_rate = rospy.Rate(self._control_rate)
 
         dimensions_dict = self._determine_dimensions(trajectory_points)
-	# Force Velocites/Accelerations to zero at the final timestep 
+
+        if num_points == 1:
+            # Add current position as trajectory point
+            first_trajectory_point = JointTrajectoryPoint()
+            first_trajectory_point.positions = self._get_current_position(joint_names)
+            # To preserve desired velocities and accelerations, copy them to the first
+            # trajectory point if the trajectory is only 1 point.
+            if dimensions_dict['velocities']:
+                first_trajectory_point.velocities = deepcopy(trajectory_points[0].velocities)
+            if dimensions_dict['accelerations']:
+                first_trajectory_point.accelerations = deepcopy(trajectory_points[0].accelerations)
+            first_trajectory_point.time_from_start = rospy.Duration(0)
+            trajectory_points.insert(0, first_trajectory_point)
+            num_points = len(trajectory_points)
+
+        # Force Velocites/Accelerations to zero at the final timestep
         # if they exist in the trajectory
-	# Remove this behavior if you are stringing together trajectories,
+        # Remove this behavior if you are stringing together trajectories,
         # and want continuous, non-zero velocities/accelerations between
         # trajectories
         if dimensions_dict['velocities']:
@@ -366,9 +381,18 @@ class JointTrajectoryActionServer(object):
 
         # Compute Full Bezier Curve Coefficients for all 7 joints
         pnt_times = [pnt.time_from_start.to_sec() for pnt in trajectory_points]
-        b_matrix = self._compute_bezier_coeff(joint_names,
-                                              trajectory_points,
-                                              dimensions_dict)
+        try:
+            b_matrix = self._compute_bezier_coeff(joint_names,
+                                                  trajectory_points,
+                                                  dimensions_dict)
+        except Exception as ex:
+            rospy.logerr(("{0}: Failed to compute a Bezier trajectory for {1}"
+                         " arm with error \"{2}: {3}\"").format(
+                                                  self._action_name,
+                                                  self._name,
+                                                  type(ex).__name__, ex))
+            self._server.set_aborted()
+            return
         # Wait for the specified execution time, if not provided use now
         start_time = goal.trajectory.header.stamp.to_sec()
         if start_time == 0.0:
