@@ -1,3 +1,7 @@
+1.1.1 (2015-5-15)
+---------------------------------
+-  Fixed a bug that caused the JTAS to error with a path of one or two points is supplied as a trajectory
+
 1.1.0 (2015-1-2)
 ---------------------------------
 - Updates baxter_interface to ROS Indigo
