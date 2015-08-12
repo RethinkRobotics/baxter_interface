@@ -75,7 +75,7 @@ class CameraController(object):
 
         list_svc = rospy.ServiceProxy('/cameras/list', ListCameras)
         rospy.wait_for_service('/cameras/list', timeout=10)
-        if not self._id in list_svc().cameras:
+        if not self._id in ["left_hand_camera","right_hand_camera","head_camera"]:
             raise AttributeError(
                 ("Cannot locate a service for camera name '{0}'. "
                 "Close a different camera first and try again.".format(self._id)))
