@@ -119,6 +119,10 @@ class Limb(object):
                    "from %s") % (self.name.capitalize(), joint_state_topic)
         baxter_dataflow.wait_for(lambda: len(self._joint_angle.keys()) > 0,
                                  timeout_msg=err_msg)
+        err_msg = ("%s limb init failed to get current endpoint_state "
+                   "from %s") % (self.name.capitalize(), ns + 'endpoint_state')
+        baxter_dataflow.wait_for(lambda: len(self._cartesian_pose.keys()) > 0,
+                                 timeout_msg=err_msg)
 
     def _on_joint_states(self, msg):
         for idx, name in enumerate(msg.name):
