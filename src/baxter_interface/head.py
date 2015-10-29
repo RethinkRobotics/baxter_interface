@@ -81,7 +81,7 @@ class Head(object):
 
     def _on_head_state(self, msg):
         self._state['pan'] = msg.pan
-        self._state['panning'] = msg.isPanning
+        self._state['panning'] = msg.isTurning
         self._state['nodding'] = msg.isNodding
 
     def pan(self):
@@ -111,20 +111,32 @@ class Head(object):
         """
         return self._state['panning']
 
-    def set_pan(self, angle, speed=100, timeout=10.0):
+    def set_pan(self, angle, speed=1.0, timeout=10.0, scale_speed=False):
         """
         Pan at the given speed to the desired angle.
 
         @type angle: float
         @param angle: Desired pan angle in radians.
         @type speed: int
-        @param speed: Desired speed to pan at, range is 0-100 [100]
+        @param speed: Desired speed to pan at, range is 0-1.0 [1.0]
         @type timeout: float
         @param timeout: Seconds to wait for the head to pan to the
                         specified angle. If 0, just command once and
                         return. [10]
+        @param scale_speed: Scale speed to pan at by a factor of 100,
+                            to use legacy range between 0-100 [100]
         """
-        msg = HeadPanCommand(angle, speed)
+        if scale_speed:
+            cmd_speed = speed / 100.0;
+        else:
+            cmd_speed = speed
+        if (cmd_speed < HeadPanCommand.MIN_SPEED_RATIO or
+              cmd_speed > HeadPanCommand.MAX_SPEED_RATIO):
+            rospy.logerr(("Commanded Speed, ({0}), outside of valid range"
+                          " [{1}, {2}]").format(cmd_speed,
+                          HeadPanCommand.MIN_SPEED_RATIO,
+                          HeadPanCommand.MAX_SPEED_RATIO))
+        msg = HeadPanCommand(angle, cmd_speed, True)
         self._pub_pan.publish(msg)
 
         if not timeout == 0:

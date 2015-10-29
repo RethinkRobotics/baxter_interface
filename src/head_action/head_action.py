@@ -41,6 +41,10 @@ from control_msgs.msg import (
 )
 
 import baxter_interface
+from baxter_core_msgs.msg import (
+   HeadPanCommand,
+)
+
 
 class HeadActionServer(object):
     def __init__(self, reconfig_server):
@@ -85,8 +89,8 @@ class HeadActionServer(object):
         position = goal.position
         velocity = goal.max_velocity
         # Apply max velocity if specified < 0
-        if velocity < 0.0:
-            velocity = 100.0
+        if velocity < HeadPanCommand.MIN_SPEED_RATIO:
+            velocity = HeadPanCommand.MAX_SPEED_RATIO
 
         # Pull parameters that will define the head actuation
         self._get_head_parameters()
