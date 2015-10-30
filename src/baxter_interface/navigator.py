@@ -30,12 +30,12 @@ import rospy
 import baxter_dataflow
 
 from baxter_core_msgs.msg import (
-    ITBState,
+    NavigatorState,
 )
+
 from baxter_interface import (
     digital_io,
 )
-
 
 class Navigator(object):
     """
@@ -82,17 +82,19 @@ class Navigator(object):
         self.button2_changed = baxter_dataflow.Signal()
         self.wheel_changed = baxter_dataflow.Signal()
 
-        nav_state_topic = 'robot/itb/%s_itb/state' % (self._id,)
+        nav_state_topic = 'robot/navigators/{0}_navigator/state'.format(self._id)
         self._state_sub = rospy.Subscriber(
             nav_state_topic,
-            ITBState,
+            NavigatorState,
             self._on_state)
 
         self._inner_led = digital_io.DigitalIO(
-            '%s_itb_light_inner' % (self._id,))
+            '%s_inner_light' % (self._id,))
+        self._inner_led_idx = 0
 
         self._outer_led = digital_io.DigitalIO(
-            '%s_itb_light_outer' % (self._id,))
+            '%s_outer_light' % (self._id,))
+        self._outer_led_idx = 1
 
         init_err_msg = ("Navigator init failed to get current state from %s" %
                         (nav_state_topic,))
@@ -132,7 +134,7 @@ class Navigator(object):
         """
         Current state of the inner LED
         """
-        return self._state.innerLight
+        return self._state.lights[self._inner_led_idx]
 
     @inner_led.setter
     def inner_led(self, enable):
@@ -149,7 +151,7 @@ class Navigator(object):
         """
         Current state of the outer LED.
         """
-        return self._state.outerLight
+        return self._state.lights[self._outer_led_idx]
 
     @outer_led.setter
     def outer_led(self, enable):
@@ -164,7 +166,14 @@ class Navigator(object):
     def _on_state(self, msg):
         if not self._state:
             self._state = msg
-
+            try:
+                self._inner_led_idx = self._state.light_names.index("inner")
+            except:
+                pass
+            try:
+                self._outer_led_idx = self._state.light_names.index("outer")
+            except:
+                pass
         if self._state == msg:
             return
 
