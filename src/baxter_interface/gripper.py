@@ -149,7 +149,7 @@ class Gripper(object):
             self.on_type_changed({
                 EndEffectorProperties.SUCTION_CUP_GRIPPER: 'suction',
                 EndEffectorProperties.ELECTRIC_GRIPPER: 'electric',
-                EndEffectorProperties.CUSTOM_GRIPPER: 'custom',
+                EndEffectorProperties.PASSIVE_GRIPPER: 'custom',
                                  }.get(properties.ui_type, None))
 
     def _inc_cmd_sequence(self):
@@ -380,7 +380,7 @@ class Gripper(object):
         @rtype: bool
         """
         default_id = 131073
-        default_ui_type = EndEffectorProperties.CUSTOM_GRIPPER
+        default_ui_type = EndEffectorProperties.PASSIVE_GRIPPER
         default_manufacturer = 'Rethink Research Robot'
         default_product = 'SDK End Effector'
         # Create default properties message
@@ -953,7 +953,7 @@ class Gripper(object):
         return {
         EndEffectorProperties.SUCTION_CUP_GRIPPER: 'suction',
         EndEffectorProperties.ELECTRIC_GRIPPER: 'electric',
-        EndEffectorProperties.CUSTOM_GRIPPER: 'custom',
+        EndEffectorProperties.PASSIVE_GRIPPER: 'custom',
         }.get(self._prop.ui_type, None)
 
     def hardware_id(self):
