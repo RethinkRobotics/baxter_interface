@@ -40,7 +40,7 @@ class Signal(object):
         self._methods = WeakKeyDictionary()
 
     def __call__(self, *args, **kargs):
-        for f in self._functions[:]:
+        for f in self._functions:
             f(*args, **kargs)
 
         for obj, functions in self._methods.items():
