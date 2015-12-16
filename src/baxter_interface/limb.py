@@ -126,7 +126,7 @@ class Limb(object):
 
     def _on_joint_states(self, msg):
         for idx, name in enumerate(msg.name):
-            if self.name in name:
+            if name in self._joint_names[self.name]:
                 self._joint_angle[name] = msg.position[idx]
                 self._joint_velocity[name] = msg.velocity[idx]
                 self._joint_effort[name] = msg.effort[idx]
