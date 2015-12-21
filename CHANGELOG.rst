@@ -1,3 +1,16 @@
+1.2.0 (2015-12-21)
+---------------------------------
+- Added an optional parameter to Limb interface's move_to_joint_positions() to allow it to be aborted by test function
+  Thanks to Yoan Mollard (ymollard) for submitting this pull request!
+- Added a wait for the endpoint_state messages to be received before exiting Limb init
+- Fixed a bug in the JTAS that would cause the robot to jump back into the last commanded pose when the 
+  robot is Disabled/Re-enabled
+- Fixed a bug that would cause the Limb's on_joint_states method to fail if extra <side> joints are added to the 
+  robot's /robot/joint_states
+- Due to baxter_core_msgs change, updated EndEffectorProperties CUSTOM_GRIPPER to PASSIVE_GRIPPER
+- Due to baxter_core_msgs change, updated head interface's speed range from [0, 100] to [0, 1.0]
+- Due to baxter_core_msgs change, updated Navigator interface to use update Nav topics and lights msg field
+
 1.1.1 (2015-5-15)
 ---------------------------------
 -  Fixed a bug that caused the JTAS to error with a path of one or two points is supplied as a trajectory
