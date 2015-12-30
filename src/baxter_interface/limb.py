@@ -119,10 +119,14 @@ class Limb(object):
                    "from %s") % (self.name.capitalize(), joint_state_topic)
         baxter_dataflow.wait_for(lambda: len(self._joint_angle.keys()) > 0,
                                  timeout_msg=err_msg)
+        err_msg = ("%s limb init failed to get current endpoint_state "
+                   "from %s") % (self.name.capitalize(), ns + 'endpoint_state')
+        baxter_dataflow.wait_for(lambda: len(self._cartesian_pose.keys()) > 0,
+                                 timeout_msg=err_msg)
 
     def _on_joint_states(self, msg):
         for idx, name in enumerate(msg.name):
-            if self.name in name:
+            if name in self._joint_names[self.name]:
                 self._joint_angle[name] = msg.position[idx]
                 self._joint_velocity[name] = msg.velocity[idx]
                 self._joint_effort[name] = msg.effort[idx]
@@ -399,7 +403,8 @@ class Limb(object):
         return self.move_to_joint_positions(angles, timeout)
 
     def move_to_joint_positions(self, positions, timeout=15.0,
-                                threshold=settings.JOINT_ANGLE_TOLERANCE):
+                                threshold=settings.JOINT_ANGLE_TOLERANCE,
+                                test=None):
         """
         (Blocking) Commands the limb to the provided positions.
 
@@ -414,6 +419,7 @@ class Limb(object):
         @type threshold: float
         @param threshold: position threshold in radians across each joint when
         move is considered successful [0.008726646]
+        @param test: optional function returning True if motion must be aborted
         """
         cmd = self.joint_angles()
 
@@ -433,7 +439,8 @@ class Limb(object):
 
         self.set_joint_positions(filtered_cmd())
         baxter_dataflow.wait_for(
-            lambda: (all(diff() < threshold for diff in diffs)),
+            test=lambda: callable(test) and test() == True or \
+                         (all(diff() < threshold for diff in diffs)),
             timeout=timeout,
             timeout_msg=("%s limb failed to reach commanded joint positions" %
                          (self.name.capitalize(),)),
