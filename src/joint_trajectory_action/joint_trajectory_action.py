@@ -70,6 +70,7 @@ class JointTrajectoryActionServer(object):
             auto_start=False)
         self._action_name = rospy.get_name()
         self._limb = baxter_interface.Limb(limb)
+        self._enable = baxter_interface.RobotEnable()
         self._name = limb
         self._cuff = baxter_interface.DigitalIO('%s_lower_cuff' % (limb,))
         self._cuff.state_changed.connect(self._cuff_cb)
@@ -119,6 +120,9 @@ class JointTrajectoryActionServer(object):
             JointTrajectoryPoint,
             tcp_nodelay=True,
             queue_size=1)
+
+    def robot_is_enabled(self):
+        return self._enable.state().enabled
 
     def clean_shutdown(self):
         self._alive = False
@@ -225,7 +229,8 @@ class JointTrajectoryActionServer(object):
         if self._mode == 'velocity':
             velocities = [0.0] * len(joint_names)
             cmd = dict(zip(joint_names, velocities))
-            while (not self._server.is_new_goal_available() and self._alive):
+            while (not self._server.is_new_goal_available() and self._alive
+                   and self.robot_is_enabled()):
                 self._limb.set_joint_velocities(cmd)
                 if self._cuff_state:
                     self._limb.exit_control_mode()
@@ -240,7 +245,8 @@ class JointTrajectoryActionServer(object):
                     pnt.velocities = [0.0] * len(joint_names)
                 if dimensions_dict['accelerations']:
                     pnt.accelerations = [0.0] * len(joint_names)
-            while (not self._server.is_new_goal_available() and self._alive):
+            while (not self._server.is_new_goal_available() and self._alive
+                   and self.robot_is_enabled()):
                 self._limb.set_joint_positions(joint_angles, raw=raw_pos_mode)
                 # zero inverse dynamics feedforward command
                 if self._mode == 'position_w_id':
@@ -253,7 +259,7 @@ class JointTrajectoryActionServer(object):
                 rospy.sleep(1.0 / self._control_rate)
 
     def _command_joints(self, joint_names, point, start_time, dimensions_dict):
-        if self._server.is_preempt_requested():
+        if self._server.is_preempt_requested() or not self.robot_is_enabled():
             rospy.loginfo("%s: Trajectory Preempted" % (self._action_name,))
             self._server.set_preempted()
             self._command_stop(joint_names, self._limb.joint_angles(), start_time, dimensions_dict)
@@ -261,8 +267,8 @@ class JointTrajectoryActionServer(object):
         velocities = []
         deltas = self._get_current_error(joint_names, point.positions)
         for delta in deltas:
-            if (math.fabs(delta[1]) >= self._path_thresh[delta[0]]
-                and self._path_thresh[delta[0]] >= 0.0):
+            if ((math.fabs(delta[1]) >= self._path_thresh[delta[0]]
+                and self._path_thresh[delta[0]] >= 0.0)) or not self.robot_is_enabled():
                 rospy.logerr("%s: Exceeded Error Threshold on %s: %s" %
                              (self._action_name, delta[0], str(delta[1]),))
                 self._result.error_code = self._result.PATH_TOLERANCE_VIOLATED
@@ -406,7 +412,8 @@ class JointTrajectoryActionServer(object):
         # Keep track of current indices for spline segment generation
         now_from_start = rospy.get_time() - start_time
         end_time = trajectory_points[-1].time_from_start.to_sec()
-        while (now_from_start < end_time and not rospy.is_shutdown()):
+        while (now_from_start < end_time and not rospy.is_shutdown() and
+               self.robot_is_enabled()):
             #Acquire Mutex
             now = rospy.get_time()
             now_from_start = now - start_time
@@ -451,7 +458,7 @@ class JointTrajectoryActionServer(object):
                 return True
 
         while (now_from_start < (last_time + self._goal_time)
-               and not rospy.is_shutdown()):
+               and not rospy.is_shutdown() and self.robot_is_enabled()):
             if not self._command_joints(joint_names, last, start_time, dimensions_dict):
                 return
             now_from_start = rospy.get_time() - start_time
