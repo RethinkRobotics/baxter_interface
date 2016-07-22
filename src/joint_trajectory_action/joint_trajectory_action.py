@@ -33,6 +33,7 @@ from copy import deepcopy
 import math
 import operator
 import numpy as np
+from multiprocessing import Lock
 
 import bezier
 
@@ -69,6 +70,7 @@ class JointTrajectoryActionServer(object):
             FollowJointTrajectoryAction,
             execute_cb=self._on_trajectory_action,
             auto_start=False)
+        self._mutex = Lock()
         self._command = rospy.Subscriber(self._ns + '/joint_trajectory/command', JointTrajectory, self._on_joint_trajectory)
         self._action_name = rospy.get_name()
         self._limb = baxter_interface.Limb(limb)
@@ -417,6 +419,7 @@ class JointTrajectoryActionServer(object):
         while (now_from_start < end_time and not rospy.is_shutdown() and
                self.robot_is_enabled()):
             #Acquire Mutex
+            self._mutex.acquire()
             now = rospy.get_time()
             now_from_start = now - start_time
             idx = bisect.bisect(pnt_times, now_from_start)
@@ -439,6 +442,7 @@ class JointTrajectoryActionServer(object):
             command_executed = self._command_joints(joint_names, point, start_time, dimensions_dict)
             self._update_feedback(deepcopy(point), joint_names, now_from_start)
             # Release the Mutex
+            self._mutex.release()
             if not command_executed:
                 return
             control_rate.sleep()
@@ -575,6 +579,9 @@ class JointTrajectoryActionServer(object):
         while (now_from_start < end_time and not rospy.is_shutdown()):
             idx = bisect.bisect(pnt_times, now_from_start)
 
+            #Acquire Mutex
+            self._mutex.acquire()
+
             if idx == 0:
                 # If our current time is before the first specified point
                 # in the trajectory, then we should interpolate between
@@ -599,6 +606,8 @@ class JointTrajectoryActionServer(object):
             if not self._command_joints(joint_names, point):
                 return
 
+            # Release the Mutex
+            self._mutex.release()
             control_rate.sleep()
             now_from_start = rospy.get_time() - start_time
             last_idx = idx
