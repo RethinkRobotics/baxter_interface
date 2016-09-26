@@ -361,7 +361,7 @@ class JointTrajectoryActionServer(object):
 
         dimensions_dict = self._determine_dimensions(trajectory_points)
 
-        if num_points >= 1 and trajectory_points[0].time_from_start.to_sec() > 0:
+        if trajectory_points[0].time_from_start.to_sec() > 0: # it already retuned when num_points == 0 (see 10 lines above)
             # Add current position as trajectory point
             first_trajectory_point = JointTrajectoryPoint()
             first_trajectory_point.positions = self._get_current_position(joint_names)
