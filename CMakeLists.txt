@@ -22,6 +22,7 @@ generate_dynamic_reconfigure_options(
   cfg/PositionFFJointTrajectoryActionServer.cfg
   cfg/GripperActionServer.cfg
   cfg/HeadActionServer.cfg
+  cfg/SuppressRealtimeMonitoringServer.cfg
 )
 
 add_dependencies(${PROJECT_NAME}_gencfg baxter_core_msgs_generate_messages_py)
