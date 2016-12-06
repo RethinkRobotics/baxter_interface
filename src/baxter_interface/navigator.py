@@ -186,11 +186,11 @@ class Navigator(object):
                    ]
         for i, signal in enumerate(buttons):
             if old_state.buttons[i] != msg.buttons[i]:
-                signal(msg.buttons[i])
+                signal(msg.buttons[i],self._id,"button",i)
 
         if old_state.wheel != msg.wheel:
             diff = msg.wheel - old_state.wheel
             if abs(diff % 256) < 127:
-                self.wheel_changed(diff % 256)
+                self.wheel_changed(diff % 256,self._id,"wheel",msg.wheel)
             else:
-                self.wheel_changed(diff % (-256))
+                self.wheel_changed(diff % (-256),self._id,"wheel",msg.wheel)
