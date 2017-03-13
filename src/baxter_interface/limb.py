@@ -30,19 +30,23 @@ import collections
 from copy import deepcopy
 
 import rospy
-
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import (
     JointState
 )
 from std_msgs.msg import (
     Float64,
+    Header
 )
-
 import baxter_dataflow
 
 from baxter_core_msgs.msg import (
     JointCommand,
-    EndpointState,
+    EndpointState
+)
+from baxter_core_msgs.srv import (
+    SolvePositionIK,
+    SolvePositionIKRequest,
 )
 from baxter_interface import settings
 
@@ -448,3 +452,51 @@ class Limb(object):
             raise_on_error=False,
             body=lambda: self.set_joint_positions(filtered_cmd())
             )
+
+    def ik(self, pose):
+        '''
+        Call a ROS service PositionKinematicsNode/IKService to solve Baxter specific inverse kinematics.
+        The code is based on http://sdk.rethinkrobotics.com/wiki/IK_Service_-_Code_Walkthrough
+
+        @param pose: Goal pose of the eef to compute ik for.
+        @type pose: geometry_msgs.Pose
+        @return: dict of position per joint. None if IK failed.
+        @summary: Example output:
+
+            limb.get_eef_pose('left', pose)
+            SUCCESS - Valid Joint Solution Found:
+            [INFO] [WallTime: 1483757854.633608] [4312.677000] IK result:
+            Out[9]:
+            {'left_e0': 2.364365552432951,
+             'left_e1': 1.6132818021698665,
+             'left_s0': -0.5247314068347426,
+             'left_s1': 0.7952608492744296,
+             'left_w0': -2.7610159637242404,
+             'left_w1': 1.5973748950724531,
+             'left_w2': 0.37670722936273954}
+        '''
+        limb = self.name
+        limb_joints = None
+
+        ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
+        iksvc = rospy.ServiceProxy(ns, SolvePositionIK)
+        ikreq = SolvePositionIKRequest()
+        hdr = Header(stamp=rospy.Time.now(), frame_id='base')
+        posestamped = PoseStamped()
+        posestamped.header = hdr
+        posestamped.pose = pose
+        ikreq.pose_stamp.append(posestamped)
+        try:
+            rospy.wait_for_service(ns, 5.0)
+            resp = iksvc(ikreq)
+        except (rospy.ServiceException, rospy.ROSException), e:
+            rospy.logerr("Service call failed: %s" % (e,))
+            return None
+        if (resp.isValid[0]):
+            rospy.loginfo("SUCCESS - Valid Joint Solution Found:")
+            # Format solution into Limb API-compatible dictionary
+            limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+            rospy.loginfo('IK result: '.format(limb_joints))
+        else:
+            rospy.logerr("INVALID POSE - No Valid Joint Solution Found.")
+        return limb_joints
