@@ -431,7 +431,7 @@ class JointTrajectoryActionServer(object):
             # To preserve desired velocities and accelerations, copy them to the first
             # trajectory point if the trajectory is only 1 point.
             if dimensions_dict['velocities']:
-                first_trajectory_point.velocities = deepcopy(trajectory_points[0].velocities)
+                first_trajectory_point.velocities = self._get_current_velocities(joint_names)
             if dimensions_dict['accelerations']:
                 first_trajectory_point.accelerations = deepcopy(trajectory_points[0].accelerations)
             first_trajectory_point.time_from_start = rospy.Duration(0)
