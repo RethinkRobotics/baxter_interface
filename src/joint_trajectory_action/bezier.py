@@ -171,7 +171,7 @@ def de_boor_control_pts(points_array, d0=None,
     return d_pts
 
 
-def bezier_coefficients(points_array, d_pts):
+def bezier_coefficients(points_array, d_pts=None):
     """
     Compute the Bezier coefficients for a given
     set for user-supplied control pts and
@@ -201,41 +201,48 @@ def bezier_coefficients(points_array, d_pts):
     (rows, k) = np.shape(points_array)
     N = rows - 1  # N minus 1 because points array includes x_0
     b_coeffs = np.zeros(shape=(k, N, 4))
-    for i in range(0, N):
-        points_array_i = i+1
-        d_pts_i = i + 2
-        if i == 0:
-            for axis_pos in range(0, k):
-                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                        axis_pos]
-                b_coeffs[axis_pos, i, 1] = d_pts[d_pts_i - 1, axis_pos]
-                b_coeffs[axis_pos, i, 2] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
-                                            + 0.5 * d_pts[d_pts_i, axis_pos])
-                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
-                                                        axis_pos]
-        elif i == N-1:
-            for axis_pos in range(0, k):
-                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                        axis_pos]
-                b_coeffs[axis_pos, i, 1] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
-                                            + 0.5 * d_pts[d_pts_i, axis_pos])
-                b_coeffs[axis_pos, i, 2] = d_pts[d_pts_i, axis_pos]
-                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
-                                                        axis_pos]
-        else:
-            for axis_pos in range(0, k):
-                b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
-                                                        axis_pos]
-                b_coeffs[axis_pos, i, 1] = (2.0/3.0 * d_pts[d_pts_i - 1,
+    if d_pts is None:
+        for i in range(0, N):
+            b_coeffs[0, i, 0] = points_array[i, 0]
+            b_coeffs[0, i, 1] = points_array[i, 0] + (1.0 / 3.0) * points_array[i, 1]
+            b_coeffs[0, i, 2] = points_array[i+1, 0] - (1.0 / 3.0) * points_array[i+1, 1]
+            b_coeffs[0, i, 3] = points_array[i+1, 0]
+    else:
+        for i in range(0, N):
+            points_array_i = i+1
+            d_pts_i = i + 2
+            if i == 0:
+                for axis_pos in range(0, k):
+                    b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
                                                             axis_pos]
-                                            + 1.0/3.0 * d_pts[d_pts_i,
-                                                              axis_pos])
-                b_coeffs[axis_pos, i, 2] = (1.0/3.0 * d_pts[d_pts_i - 1,
+                    b_coeffs[axis_pos, i, 1] = d_pts[d_pts_i - 1, axis_pos]
+                    b_coeffs[axis_pos, i, 2] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
+                                                + 0.5 * d_pts[d_pts_i, axis_pos])
+                    b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
                                                             axis_pos]
-                                            + 2.0/3.0 * d_pts[d_pts_i,
-                                                              axis_pos])
-                b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
-                                                        axis_pos]
+            elif i == N-1:
+                for axis_pos in range(0, k):
+                    b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
+                                                            axis_pos]
+                    b_coeffs[axis_pos, i, 1] = (0.5 * d_pts[d_pts_i - 1, axis_pos]
+                                                + 0.5 * d_pts[d_pts_i, axis_pos])
+                    b_coeffs[axis_pos, i, 2] = d_pts[d_pts_i, axis_pos]
+                    b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
+                                                            axis_pos]
+            else:
+                for axis_pos in range(0, k):
+                    b_coeffs[axis_pos, i, 0] = points_array[points_array_i - 1,
+                                                            axis_pos]
+                    b_coeffs[axis_pos, i, 1] = (2.0/3.0 * d_pts[d_pts_i - 1,
+                                                                axis_pos]
+                                                + 1.0/3.0 * d_pts[d_pts_i,
+                                                                  axis_pos])
+                    b_coeffs[axis_pos, i, 2] = (1.0/3.0 * d_pts[d_pts_i - 1,
+                                                                axis_pos]
+                                                + 2.0/3.0 * d_pts[d_pts_i,
+                                                                  axis_pos])
+                    b_coeffs[axis_pos, i, 3] = points_array[points_array_i,
+                                                            axis_pos]
 
     return b_coeffs
 

@@ -104,7 +104,7 @@ def main():
     )
     parser.add_argument(
         "-i", "--interpolation", default='bezier',
-        choices=['bezier', 'minjerk'],
+        choices=['bezier', 'bezier_with_velocity', 'minjerk'],
         help="interpolation method for trajectory generation"
     )
     args = parser.parse_args(rospy.myargv()[1:])

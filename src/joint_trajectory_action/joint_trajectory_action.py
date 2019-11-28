@@ -334,6 +334,26 @@ class JointTrajectoryActionServer(object):
             b_matrix[jnt, :, :, :] = bezier.bezier_coefficients(traj_array, d_pts)
         return b_matrix
 
+    def _compute_bezier_with_velocity_coeff(self, joint_names, trajectory_points, dimensions_dict):
+        # Compute Full Bezier Curve
+        num_joints = len(joint_names)
+        num_traj_pts = len(trajectory_points)
+        num_traj_dim = sum(dimensions_dict.values())
+        num_b_values = len(['b0', 'b1', 'b2', 'b3'])
+        b_matrix = np.zeros(shape=(num_joints, num_traj_dim, num_traj_pts-1, num_b_values))
+        for jnt in xrange(num_joints):
+            traj_array = np.zeros(shape=(len(trajectory_points), num_traj_dim))
+            for idx, point in enumerate(trajectory_points):
+                current_point = list()
+                current_point.append(point.positions[jnt])
+                if dimensions_dict['velocities']:
+                    current_point.append(point.velocities[jnt])
+                if dimensions_dict['accelerations']:
+                    current_point.append(point.accelerations[jnt])
+                traj_array[idx, :] = current_point
+            b_matrix[jnt, :, :, :] = bezier.bezier_coefficients(traj_array)
+        return b_matrix
+
     def _get_minjerk_point(self, m_matrix, idx, t, cmd_time, dimensions_dict):
         pnt = JointTrajectoryPoint()
         pnt.time_from_start = rospy.Duration(cmd_time)
@@ -437,6 +457,10 @@ class JointTrajectoryActionServer(object):
                                                        trajectory_points,
                                                        point_duration,
                                                        dimensions_dict)
+            elif self._interpolation == 'bezier_with_velocity':
+                # Compute Full Bezier Curve Coefficients for all 7 joints
+                b_matrix = self._compute_bezier_with_velocity_coeff(
+                    joint_names, trajectory_points, dimensions_dict)
             else:
                 # Compute Full Bezier Curve Coefficients for all 7 joints
                 b_matrix = self._compute_bezier_coeff(joint_names,
