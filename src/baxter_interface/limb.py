@@ -43,6 +43,7 @@ import baxter_dataflow
 from baxter_core_msgs.msg import (
     JointCommand,
     EndpointState,
+    SEAJointState,
 )
 from baxter_interface import settings
 
@@ -67,6 +68,7 @@ class Limb(object):
         self._joint_angle = dict()
         self._joint_velocity = dict()
         self._joint_effort = dict()
+        self._joint_commanded_angle = dict()
         self._cartesian_pose = dict()
         self._cartesian_velocity = dict()
         self._cartesian_effort = dict()
@@ -115,6 +117,13 @@ class Limb(object):
             queue_size=1,
             tcp_nodelay=True)
 
+        _sea_joint_state_sub = rospy.Subscriber(
+            ns + 'gravity_compensation_torques',
+            SEAJointState,
+            self._on_sea_joint_state,
+            queue_size=1,
+            tcp_nodelay=True)
+
         err_msg = ("%s limb init failed to get current joint_states "
                    "from %s") % (self.name.capitalize(), joint_state_topic)
         baxter_dataflow.wait_for(lambda: len(self._joint_angle.keys()) > 0,
@@ -122,6 +131,10 @@ class Limb(object):
         err_msg = ("%s limb init failed to get current endpoint_state "
                    "from %s") % (self.name.capitalize(), ns + 'endpoint_state')
         baxter_dataflow.wait_for(lambda: len(self._cartesian_pose.keys()) > 0,
+                                 timeout_msg=err_msg)
+        err_msg = ("%s limb init failed to get current SEA joint state"
+                   "from %s") % (self.name.capitalize(), ns + 'gravity_compensation_torques')
+        baxter_dataflow.wait_for(lambda: len(self._joint_commanded_angle.keys()) > 0,
                                  timeout_msg=err_msg)
 
     def _on_joint_states(self, msg):
@@ -173,6 +186,11 @@ class Limb(object):
                 msg.wrench.torque.z,
             ),
         }
+
+    def _on_sea_joint_state(self, msg):
+        for idx, name in enumerate(msg.name):
+            if name in self._joint_names[self.name]:
+                self._joint_commanded_angle[name] = msg.commanded_position[idx]
 
     def joint_names(self):
         """
@@ -291,6 +309,26 @@ class Limb(object):
                       L{Limb.Point}
         """
         return deepcopy(self._cartesian_effort)
+
+    def joint_commanded_angle(self, joint):
+        """
+        Return the requested joint commanded angle.
+
+        @type joint: str
+        @param joint: name of a joint
+        @rtype: float
+        @return: commanded angle in radians of individual joint
+        """
+        return self._joint_commanded_angle[joint]
+
+    def joint_commanded_angles(self):
+        """
+        Return all joint angles.
+
+        @rtype: dict({str:float})
+        @return: unordered dict of joint name Keys to commanded angle (rad) Values
+        """
+        return deepcopy(self._joint_commanded_angle)
 
     def set_command_timeout(self, timeout):
         """

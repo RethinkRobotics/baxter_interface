@@ -196,6 +196,9 @@ class JointTrajectoryActionServer(object):
         error = map(operator.sub, set_point, current)
         return zip(joint_names, error)
 
+    def _get_commanded_position(self, joint_names):
+        return [self._limb.joint_commanded_angle(joint) for joint in joint_names]
+
     def _update_feedback(self, cmd_point, jnt_names, cur_time):
         self._fdbk.header.stamp = rospy.Duration.from_sec(rospy.get_time())
         self._fdbk.joint_names = jnt_names
@@ -424,10 +427,10 @@ class JointTrajectoryActionServer(object):
 
         dimensions_dict = self._determine_dimensions(trajectory_points)
 
-        if num_points == 1:
+        if trajectory_points[0].time_from_start.to_sec() > 0: # it already retuned when num_points == 0 (see 10 lines above)
             # Add current position as trajectory point
             first_trajectory_point = JointTrajectoryPoint()
-            first_trajectory_point.positions = self._get_current_position(joint_names)
+            first_trajectory_point.positions = self._get_commanded_position(joint_names)
             # To preserve desired velocities and accelerations, copy them to the first
             # trajectory point if the trajectory is only 1 point.
             if dimensions_dict['velocities']:
