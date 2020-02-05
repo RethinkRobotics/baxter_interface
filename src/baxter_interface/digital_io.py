@@ -95,7 +95,7 @@ class DigitalIO(object):
 
         # trigger signal if changed
         if old_state is not None and old_state != new_state:
-            self.state_changed(new_state)
+            self.state_changed(new_state,self._id)
 
     @property
     def is_output(self):
