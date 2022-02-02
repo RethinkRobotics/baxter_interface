@@ -164,7 +164,7 @@ http://sdk.rethinkrobotics.com/wiki/RSDK_Shell#Initialize
                 timeout_msg=error_env,
                 body=pub.publish
             )
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ETIMEDOUT:
                 if self._state.error == True and self._state.stopped == False:
                     rospy.logwarn(error_nonfatal)
