@@ -28,14 +28,16 @@
 """
 Baxter RSDK Joint Trajectory Action Server
 """
+from __future__ import absolute_import
+
 import bisect
 from copy import deepcopy
 import math
 import operator
 import numpy as np
 
-import bezier
-import minjerk
+from . import bezier
+from . import minjerk
 
 import rospy
 
@@ -56,6 +58,11 @@ from trajectory_msgs.msg import (
 import baxter_control
 import baxter_dataflow
 import baxter_interface
+
+
+# Python2's xrange equals Python3's range, and xrange is removed on Python3
+if not hasattr(__builtins__, 'xrange'):
+    xrange = range
 
 
 class JointTrajectoryActionServer(object):
@@ -203,10 +210,11 @@ class JointTrajectoryActionServer(object):
         self._fdbk.desired.time_from_start = rospy.Duration.from_sec(cur_time)
         self._fdbk.actual.positions = self._get_current_position(jnt_names)
         self._fdbk.actual.time_from_start = rospy.Duration.from_sec(cur_time)
-        self._fdbk.error.positions = map(operator.sub,
-                                         self._fdbk.desired.positions,
-                                         self._fdbk.actual.positions
-                                        )
+        self._fdbk.error.positions = list(map(operator.sub,
+                                              self._fdbk.desired.positions,
+                                              self._fdbk.actual.positions
+                                             )
+                                         )
         self._fdbk.error.time_from_start = rospy.Duration.from_sec(cur_time)
         self._server.publish_feedback(self._fdbk)
 
