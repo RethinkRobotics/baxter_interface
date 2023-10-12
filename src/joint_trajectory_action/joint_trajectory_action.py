@@ -28,14 +28,16 @@
 """
 Baxter RSDK Joint Trajectory Action Server
 """
+from __future__ import absolute_import
+
 import bisect
 from copy import deepcopy
 import math
 import operator
 import numpy as np
 
-import bezier
-import minjerk
+from . import bezier
+from . import minjerk
 
 import rospy
 
@@ -56,6 +58,11 @@ from trajectory_msgs.msg import (
 import baxter_control
 import baxter_dataflow
 import baxter_interface
+
+
+# Python2's xrange equals Python3's range, and xrange is removed on Python3
+if not hasattr(__builtins__, 'xrange'):
+    xrange = range
 
 
 class JointTrajectoryActionServer(object):
@@ -203,28 +210,29 @@ class JointTrajectoryActionServer(object):
         self._fdbk.desired.time_from_start = rospy.Duration.from_sec(cur_time)
         self._fdbk.actual.positions = self._get_current_position(jnt_names)
         self._fdbk.actual.time_from_start = rospy.Duration.from_sec(cur_time)
-        self._fdbk.error.positions = map(operator.sub,
-                                         self._fdbk.desired.positions,
-                                         self._fdbk.actual.positions
-                                        )
+        self._fdbk.error.positions = list(map(operator.sub,
+                                              self._fdbk.desired.positions,
+                                              self._fdbk.actual.positions
+                                             )
+                                         )
         self._fdbk.error.time_from_start = rospy.Duration.from_sec(cur_time)
         self._server.publish_feedback(self._fdbk)
 
     def _reorder_joints_ff_cmd(self, joint_names, point):
-	joint_name_order = self._limb.joint_names()
-	pnt = JointTrajectoryPoint()
-	pnt.time_from_start = point.time_from_start
-	pos_cmd = dict(zip(joint_names, point.positions))
-	for jnt_name in joint_name_order:
-	    pnt.positions.append(pos_cmd[jnt_name])
+        joint_name_order = self._limb.joint_names()
+        pnt = JointTrajectoryPoint()
+        pnt.time_from_start = point.time_from_start
+        pos_cmd = dict(zip(joint_names, point.positions))
+        for jnt_name in joint_name_order:
+            pnt.positions.append(pos_cmd[jnt_name])
         if point.velocities:
-	    vel_cmd = dict(zip(joint_names, point.velocities))
-	    for jnt_name in joint_name_order:
-	        pnt.velocities.append(vel_cmd[jnt_name])
+            vel_cmd = dict(zip(joint_names, point.velocities))
+            for jnt_name in joint_name_order:
+                pnt.velocities.append(vel_cmd[jnt_name])
         if point.accelerations:
-	    accel_cmd = dict(zip(joint_names, point.accelerations))
-	    for jnt_name in joint_name_order:
-	        pnt.accelerations.append(accel_cmd[jnt_name])
+            accel_cmd = dict(zip(joint_names, point.accelerations))
+            for jnt_name in joint_name_order:
+                pnt.accelerations.append(accel_cmd[jnt_name])
         return pnt
 
     def _command_stop(self, joint_names, joint_angles, start_time, dimensions_dict):
